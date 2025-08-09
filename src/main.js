@@ -50,6 +50,14 @@ async function boot() {
   if (langSelect) populateLanguageSelect(langSelect)
   setUiTexts()
 
+  // If Yandex SDK is already present (pre-injected by container), signal ready ASAP
+  try {
+    if (window.YaGames?.init) {
+      const y = await window.YaGames.init()
+      y?.features?.LoadingAPI?.ready?.()
+    }
+  } catch {}
+
   const audio = new AudioManager([
     { id: 'bgm1', src: 'Nightwalk.ogg', type: 'music' },
     { id: 'bgm2', src: 'minimum.ogg', type: 'music' },

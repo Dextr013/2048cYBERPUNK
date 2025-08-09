@@ -88,7 +88,12 @@ export class Renderer {
       for (let c = 0; c < layout.n; c++) {
         const value = grid[r][c]
         if (!value) continue
-        const img = await this.getTileImage(value)
+        let img = null
+        try {
+          img = await this.getTileImage(value)
+        } catch (e) {
+          img = null
+        }
         const x = layout.startX + c * (layout.cellSize + layout.cellGap)
         const y = layout.startY + r * (layout.cellSize + layout.cellGap)
         if (img) {

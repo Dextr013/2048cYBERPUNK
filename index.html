@@ -18,9 +18,7 @@
     <link rel="preload" as="image" href="digit 512.png" />
     <link rel="preload" as="image" href="digit 1024.png" />
     <link rel="preload" as="image" href="digit 2048.png" />
-    <!-- Make stylesheet non-blocking -->
-    <link rel="preload" href="styles.css" as="style" onload="this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="styles.css"></noscript>
+    <link rel="stylesheet" href="styles.css">
     <!-- Speed up potential Yandex SDK/connects -->
     <link rel="preconnect" href="https://yandex.ru" crossorigin>
     <link rel="preconnect" href="https://yandex.ru/games" crossorigin>
@@ -87,6 +85,8 @@
       </footer>
     </div>
 
+    <!-- Early: if Yandex SDK already injected by container, mark ready to prevent overlay from blocking paint -->
+    <script>(function(){try{if(window.YaGames?.init){(async()=>{try{const y=await window.YaGames.init();y?.features?.LoadingAPI?.ready?.()}catch(e){}})()}}catch(e){}})();</script>
     <!-- Safety: force show UI if init stalls -->
     <script>window.__boot_timeout=setTimeout(function(){try{var pre=document.getElementById('preloader');var app=document.getElementById('app');if(pre)pre.classList.add('hidden');if(app)app.classList.remove('hidden');window.parent&&window.parent.postMessage({type:'game_ready'},'*')}catch(e){}},4000);</script>
     <script type="module" src="src/main.js"></script>
