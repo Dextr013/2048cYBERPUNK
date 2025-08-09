@@ -17,7 +17,6 @@ export const Platform = {
       if (this.env === 'yandex') {
         await this.ensureYandexSdk()
         this.ysdk = await window.YaGames.init()
-        // Try silent auth
         try { this.player = await this.ysdk.getPlayer({ scopes: true }) } catch {}
       }
       if (this.env === 'samsung') {
@@ -29,6 +28,10 @@ export const Platform = {
     } catch (e) {
       console.warn('Platform init error', e)
     }
+  },
+
+  getLocale() {
+    try { return this.ysdk?.i18n?.getLocale?.() || navigator.language || 'en' } catch { return navigator.language || 'en' }
   },
 
   async auth() {
@@ -48,7 +51,6 @@ export const Platform = {
       }
       if (this.env === 'samsung') {
         const si = window.samsungInstant
-        // Try several known shapes
         if (si?.loadData) {
           const d = await si.loadData(['save'])
           return d?.save || null
@@ -107,6 +109,7 @@ export const Platform = {
   },
 
   signalReady() {
+    try { this.ysdk?.features?.LoadingAPI?.ready?.() } catch {}
     try { window.dispatchEvent(new Event('gameready')) } catch {}
     try { window.parent?.postMessage({ type: 'game_ready' }, '*') } catch {}
     try { window.YTPlayable?.gameReady?.() } catch {}

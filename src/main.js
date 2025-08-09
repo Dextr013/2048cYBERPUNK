@@ -33,7 +33,8 @@ function tryShowInterstitial() {
 
 async function boot() {
   await loadI18n(['en', 'ru'])
-  setLanguage(navigator.language.startsWith('ru') ? 'ru' : 'en')
+  const prefer = Platform.getLocale?.() || navigator.language || 'en'
+  setLanguage(prefer.startsWith('ru') ? 'ru' : 'en')
   populateLanguageSelect(document.getElementById('lang-select'))
   setUiTexts()
 

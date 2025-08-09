@@ -7,8 +7,10 @@ export async function loadI18n(locales) {
       const url = `src/i18n/${loc}.json`
       try {
         const res = await fetch(url)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
         dictionaries[loc] = await res.json()
       } catch (e) {
+        console.warn('i18n load failed for', loc, e)
         dictionaries[loc] = {}
       }
     })
