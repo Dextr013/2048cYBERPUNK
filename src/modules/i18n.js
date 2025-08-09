@@ -1,0 +1,42 @@
+const dictionaries = {}
+let current = 'en'
+
+export async function loadI18n(locales) {
+  await Promise.all(
+    locales.map(async (loc) => {
+      const url = `src/i18n/${loc}.json`
+      try {
+        const res = await fetch(url)
+        dictionaries[loc] = await res.json()
+      } catch (e) {
+        dictionaries[loc] = {}
+      }
+    })
+  )
+}
+
+export function setLanguage(locale) {
+  current = locale
+}
+
+export function t(key, params) {
+  const dict = dictionaries[current] || {}
+  const raw = dict[key] || key
+  if (!params) return raw
+  return raw.replace(/\{(\w+)\}/g, (_, k) => String(params[k] ?? ''))
+}
+
+export function populateLanguageSelect(select) {
+  const options = [
+    { value: 'en', label: 'English' },
+    { value: 'ru', label: 'Русский' },
+  ]
+  select.innerHTML = ''
+  for (const opt of options) {
+    const o = document.createElement('option')
+    o.value = opt.value
+    o.textContent = opt.label
+    o.selected = opt.value === current
+    select.appendChild(o)
+  }
+}

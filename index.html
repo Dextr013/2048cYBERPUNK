@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="color-scheme" content="dark light" />
+    <title>2048 Cybergrid</title>
+    <link rel="preload" as="image" href="bg6.png" />
+    <link rel="preload" as="image" href="digit 2.png" />
+    <link rel="preload" as="image" href="digit 4.png" />
+    <link rel="preload" as="image" href="digit 8.png" />
+    <link rel="preload" as="image" href="digit 16.png" />
+    <link rel="preload" as="image" href="digit 32.png" />
+    <link rel="preload" as="image" href="digit 64.png" />
+    <link rel="preload" as="image" href="digit 128.png" />
+    <link rel="preload" as="image" href="digit 256.png" />
+    <link rel="preload" as="image" href="digit 512.png" />
+    <link rel="preload" as="image" href="digit 1024.png" />
+    <link rel="preload" as="image" href="digit 2048.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="preloader" class="preloader">
+      <div class="spinner"></div>
+      <div id="preloader-text">Loading…</div>
+    </div>
+
+    <div id="app" class="hidden">
+      <div class="hud">
+        <div class="brand">
+          <span class="title" data-i18n="title">2048 Cybergrid</span>
+          <button id="btn-new" class="btn" data-i18n="newGame">New Game</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><span data-i18n="score">Score</span><strong id="score">0</strong></div>
+          <div class="stat"><span data-i18n="best">Best</span><strong id="best">0</strong></div>
+        </div>
+        <div class="controls">
+          <button id="btn-sound" class="btn toggle" aria-pressed="false" data-i18n="soundOn">Sound</button>
+          <select id="lang-select" class="select"></select>
+          <button id="btn-settings" class="btn" data-i18n="settings">Settings</button>
+        </div>
+      </div>
+
+      <div class="game-container">
+        <canvas id="game-canvas" width="480" height="640" aria-label="game"></canvas>
+        <div id="overlay" class="overlay hidden">
+          <div class="overlay-content">
+            <div id="overlay-title" class="overlay-title">2048</div>
+            <div id="overlay-sub" class="overlay-sub">—</div>
+            <div class="overlay-actions">
+              <button id="btn-continue" class="btn primary" data-i18n="continue">Continue</button>
+              <button id="btn-restart" class="btn" data-i18n="restart">Restart</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <span>© 2025</span>
+      </footer>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
