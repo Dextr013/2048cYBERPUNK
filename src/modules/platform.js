@@ -15,7 +15,7 @@ export const Platform = {
 
     try {
       if (this.env === 'yandex') {
-        await this.#ensureYandexSdk()
+        await this.ensureYandexSdk()
         this.ysdk = await window.YaGames.init()
         // Try silent auth
         try { this.player = await this.ysdk.getPlayer({ scopes: true }) } catch {}
@@ -152,7 +152,7 @@ export const Platform = {
     try { window.parent?.postMessage({ type: 'score', score }, '*') } catch {}
   },
 
-  async #ensureYandexSdk() {
+  async ensureYandexSdk() {
     if (window.YaGames?.init) return
     await new Promise((resolve, reject) => {
       const s = document.createElement('script')
