@@ -39,18 +39,30 @@ async function boot() {
   const input = new Input(canvas)
 
   // UI wiring
-  document.getElementById('btn-new').addEventListener('click', () => {
+  document.getElementById('btn-new').addEventListener('click', async () => {
+    await Platform.showInterstitial().catch(() => {})
     game.reset()
     audio.playRandomBgm()
     hideOverlay()
+    saveState(game)
     tick(performance.now())
   })
-  document.getElementById('btn-restart').addEventListener('click', () => {
+  document.getElementById('btn-restart').addEventListener('click', async () => {
+    await Platform.showInterstitial().catch(() => {})
     game.reset()
     hideOverlay()
+    saveState(game)
     tick(performance.now())
   })
-  document.getElementById('btn-continue').addEventListener('click', () => hideOverlay())
+  document.getElementById('btn-continue').addEventListener('click', async () => {
+    // Optional: gated by rewarded ad when coming from game over
+    const wasGameOver = document.getElementById('overlay-title').textContent === t('gameOver')
+    if (wasGameOver) {
+      const ok = await Platform.showRewarded()
+      if (!ok) return
+    }
+    hideOverlay()
+  })
 
   const btnSound = document.getElementById('btn-sound')
   btnSound.addEventListener('click', () => {
@@ -71,8 +83,9 @@ async function boot() {
     const result = game.move(dir)
     if (result.moved) {
       updateHud(game)
+      saveState(game)
       if (result.won) { showOverlay(t('youWin'), t('mergeTo', { value: 2048 })); Platform.submitScore(game.score) }
-      else if (game.isGameOver()) { showOverlay(t('gameOver'), t('noMoves')); Platform.submitScore(game.score) }
+      else if (game.isGameOver()) { showOverlay(t('gameOver'), t('noMoves')); Platform.submitScore(game.score); Platform.showInterstitial() }
     }
   }
 
@@ -97,8 +110,16 @@ async function boot() {
   await Platform.init()
   Platform.signalReady()
 
-  // Start new game
-  game.reset()
+  // Try authenticate and load cloud save
+  await Platform.auth()
+  const cloud = await Platform.cloudLoad()
+
+  // Load local or cloud state
+  const local = loadState()
+  if (cloud && game.setState(cloud)) { /* loaded cloud */ }
+  else if (local && game.setState(local)) { /* loaded local */ }
+  else { game.reset() }
+
   updateHud(game)
   audio.setEnabled(false)
 
@@ -126,6 +147,20 @@ function showOverlay(title, sub) {
 }
 function hideOverlay() {
   document.getElementById('overlay').classList.add('hidden')
+}
+
+function saveState(game) {
+  const save = game.getState()
+  try { localStorage.setItem('save', JSON.stringify(save)) } catch {}
+  const best = Number(localStorage.getItem('best') || 0)
+  Platform.cloudSave(save, best).catch(() => {})
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem('save')
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch { return null }
 }
 
 boot().catch((err) => {

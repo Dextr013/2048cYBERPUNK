@@ -117,4 +117,23 @@ export class Game {
     }
     return true
   }
+
+  getState() {
+    return {
+      size: this.size,
+      grid: this.grid.map((row) => row.slice()),
+      score: this.score,
+      won: this.won,
+    }
+  }
+
+  setState(state) {
+    if (!state || !Array.isArray(state.grid)) return false
+    const n = state.grid.length
+    if (n !== this.size) return false
+    this.grid = state.grid.map((row) => row.slice())
+    this.score = Number(state.score || 0)
+    this.won = Boolean(state.won)
+    return true
+  }
 }
