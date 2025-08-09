@@ -42,9 +42,24 @@ export const Platform = {
 
   async cloudLoad() {
     try {
-      if (this.player?.getData) {
+      if (this.env === 'yandex' && this.player?.getData) {
         const data = await this.player.getData(['save', 'best'])
         return data?.save || null
+      }
+      if (this.env === 'samsung') {
+        const si = window.samsungInstant
+        // Try several known shapes
+        if (si?.loadData) {
+          const d = await si.loadData(['save'])
+          return d?.save || null
+        }
+        if (si?.getData) {
+          const d = await si.getData(['save'])
+          return d?.save || null
+        }
+        if (si?.getItem) {
+          return si.getItem('save') || null
+        }
       }
     } catch (e) { console.warn('cloudLoad failed', e) }
     return null
@@ -52,12 +67,43 @@ export const Platform = {
 
   async cloudSave(state, best) {
     try {
-      if (this.player?.setData) {
+      if (this.env === 'yandex' && this.player?.setData) {
         await this.player.setData({ save: state, best: Number(best || 0) })
         return true
       }
+      if (this.env === 'samsung') {
+        const si = window.samsungInstant
+        if (si?.saveData) {
+          await si.saveData({ save: state, best: Number(best || 0) })
+          return true
+        }
+        if (si?.setData) {
+          await si.setData({ save: state, best: Number(best || 0) })
+          return true
+        }
+        if (si?.setItem) {
+          si.setItem('save', state)
+          si.setItem('best', Number(best || 0))
+          return true
+        }
+      }
     } catch (e) { console.warn('cloudSave failed', e) }
     return false
+  },
+
+  async getLeaderboardTop(limit = 10) {
+    try {
+      if (this.env === 'yandex' && this.ysdk?.getLeaderboards) {
+        const lb = await this.ysdk.getLeaderboards()
+        const res = await lb.getLeaderboardEntries(this.config.leaderboardId, { quantityTop: limit })
+        return (res?.entries || []).map((e, idx) => ({
+          rank: e.rank ?? idx + 1,
+          name: e.player?.publicName || e.player?.uniqueID || 'Player',
+          score: e.score || 0,
+        }))
+      }
+    } catch (e) { console.warn('getLeaderboardTop error', e) }
+    return []
   },
 
   signalReady() {

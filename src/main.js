@@ -4,6 +4,7 @@ import { Game } from './modules/game.js'
 import { Renderer } from './modules/renderer.js'
 import { Input } from './modules/input.js'
 import { Platform } from './modules/platform.js'
+import { AdConfig } from './config.js'
 
 const canvas = document.getElementById('game-canvas')
 const ctx = canvas.getContext('2d', { alpha: false })
@@ -12,6 +13,7 @@ const state = {
   started: false,
   lastTs: 0,
   locale: 'ru',
+  lastInterstitial: 0,
 }
 
 function setUiTexts() {
@@ -20,6 +22,13 @@ function setUiTexts() {
     el.textContent = t(key)
   })
   document.getElementById('preloader-text').textContent = t('loading')
+}
+
+function tryShowInterstitial() {
+  const now = Date.now()
+  if (now - state.lastInterstitial < AdConfig.interstitialCooldownMs) return
+  state.lastInterstitial = now
+  Platform.showInterstitial().catch(() => {})
 }
 
 async function boot() {
@@ -40,7 +49,7 @@ async function boot() {
 
   // UI wiring
   document.getElementById('btn-new').addEventListener('click', async () => {
-    await Platform.showInterstitial().catch(() => {})
+    if (AdConfig.interstitialOnNew) tryShowInterstitial()
     game.reset()
     audio.playRandomBgm()
     hideOverlay()
@@ -48,16 +57,15 @@ async function boot() {
     tick(performance.now())
   })
   document.getElementById('btn-restart').addEventListener('click', async () => {
-    await Platform.showInterstitial().catch(() => {})
+    if (AdConfig.interstitialOnRestart) tryShowInterstitial()
     game.reset()
     hideOverlay()
     saveState(game)
     tick(performance.now())
   })
   document.getElementById('btn-continue').addEventListener('click', async () => {
-    // Optional: gated by rewarded ad when coming from game over
     const wasGameOver = document.getElementById('overlay-title').textContent === t('gameOver')
-    if (wasGameOver) {
+    if (wasGameOver && AdConfig.rewardedOnContinue) {
       const ok = await Platform.showRewarded()
       if (!ok) return
     }
@@ -78,6 +86,24 @@ async function boot() {
     setUiTexts()
   })
 
+  const btnAuth = document.getElementById('btn-auth')
+  btnAuth.addEventListener('click', async () => {
+    const ok = await Platform.auth()
+    if (ok) {
+      btnAuth.disabled = true
+      btnAuth.textContent = t('signedIn')
+      const cloud = await Platform.cloudLoad()
+      if (cloud) { game.setState(cloud); updateHud(game) }
+    }
+  })
+  const btnLb = document.getElementById('btn-lb')
+  const btnLbClose = document.getElementById('btn-lb-close')
+  btnLb.addEventListener('click', async () => {
+    openLeaderboard()
+    await renderLeaderboard()
+  })
+  btnLbClose.addEventListener('click', closeLeaderboard)
+
   // Input -> Game actions
   input.onMove = (dir) => {
     const result = game.move(dir)
@@ -85,7 +111,7 @@ async function boot() {
       updateHud(game)
       saveState(game)
       if (result.won) { showOverlay(t('youWin'), t('mergeTo', { value: 2048 })); Platform.submitScore(game.score) }
-      else if (game.isGameOver()) { showOverlay(t('gameOver'), t('noMoves')); Platform.submitScore(game.score); Platform.showInterstitial() }
+      else if (game.isGameOver()) { showOverlay(t('gameOver'), t('noMoves')); Platform.submitScore(game.score); if (AdConfig.interstitialOnGameOver) tryShowInterstitial() }
     }
   }
 
@@ -110,7 +136,7 @@ async function boot() {
   await Platform.init()
   Platform.signalReady()
 
-  // Try authenticate and load cloud save
+  // Try authenticate silently and load cloud save
   await Platform.auth()
   const cloud = await Platform.cloudLoad()
 
@@ -130,6 +156,12 @@ async function boot() {
     requestAnimationFrame(tick)
   }
   requestAnimationFrame(tick)
+
+  // If already authenticated, disable sign in button
+  if (Platform.player) {
+    btnAuth.disabled = true
+    btnAuth.textContent = t('signedIn')
+  }
 }
 
 function updateHud(game) {
@@ -147,6 +179,27 @@ function showOverlay(title, sub) {
 }
 function hideOverlay() {
   document.getElementById('overlay').classList.add('hidden')
+}
+
+function openLeaderboard() {
+  document.getElementById('lb-overlay').classList.remove('hidden')
+}
+function closeLeaderboard() {
+  document.getElementById('lb-overlay').classList.add('hidden')
+}
+async function renderLeaderboard() {
+  const list = document.getElementById('lb-list')
+  list.innerHTML = `<div class=\"row\">${t('loadingLb')}</div>`
+  const entries = await Platform.getLeaderboardTop(10)
+  if (!entries.length) { list.innerHTML = `<div class=\"row\">${t('noLbData')}</div>`; return }
+  list.innerHTML = ''
+  for (const e of entries) {
+    const row = document.createElement('div')
+    row.className = 'row'
+    row.innerHTML = `<div class="left"><span class="rank">#${e.rank}</span><span class="name"></span></div><div class="score">${e.score}</div>`
+    row.querySelector('.name').textContent = e.name
+    list.appendChild(row)
+  }
 }
 
 function saveState(game) {

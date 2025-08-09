@@ -11,5 +11,11 @@
   "noMoves": "No moves left",
   "mergeTo": "Merge to {value}",
   "loading": "Loading…",
-  "soundOn": "Sound"
+  "soundOn": "Sound",
+  "signIn": "Sign In",
+  "signedIn": "Signed In",
+  "leaderboard": "Leaderboard",
+  "loadingLb": "Loading leaderboard…",
+  "noLbData": "No leaderboard data",
+  "close": "Close"
 }

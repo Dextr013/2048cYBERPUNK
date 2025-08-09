@@ -40,6 +40,8 @@
           <button id="btn-sound" class="btn toggle" aria-pressed="false" data-i18n="soundOn">Sound</button>
           <select id="lang-select" class="select"></select>
           <button id="btn-settings" class="btn" data-i18n="settings">Settings</button>
+          <button id="btn-auth" class="btn" data-i18n="signIn">Sign In</button>
+          <button id="btn-lb" class="btn" data-i18n="leaderboard">Leaderboard</button>
         </div>
       </div>
 
@@ -52,6 +54,15 @@
             <div class="overlay-actions">
               <button id="btn-continue" class="btn primary" data-i18n="continue">Continue</button>
               <button id="btn-restart" class="btn" data-i18n="restart">Restart</button>
+            </div>
+          </div>
+        </div>
+        <div id="lb-overlay" class="overlay hidden">
+          <div class="overlay-content">
+            <div class="overlay-title" data-i18n="leaderboard">Leaderboard</div>
+            <div id="lb-list" class="lb-list"></div>
+            <div class="overlay-actions">
+              <button id="btn-lb-close" class="btn" data-i18n="close">Close</button>
             </div>
           </div>
         </div>
