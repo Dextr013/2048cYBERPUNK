@@ -21,7 +21,8 @@ function setUiTexts() {
     const key = el.getAttribute('data-i18n')
     el.textContent = t(key)
   })
-  document.getElementById('preloader-text').textContent = t('loading')
+  const pl = document.getElementById('preloader-text')
+  if (pl) pl.textContent = t('loading')
 }
 
 function tryShowInterstitial() {
@@ -31,11 +32,22 @@ function tryShowInterstitial() {
   Platform.showInterstitial().catch(() => {})
 }
 
+async function withTimeout(promise, ms) {
+  return await Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ])
+}
+
 async function boot() {
-  await loadI18n(['en', 'ru'])
+  // Load i18n but cap its wait time to avoid blocking paint
+  try {
+    await withTimeout(loadI18n(['en', 'ru']), 1500)
+  } catch {}
   const prefer = Platform.getLocale?.() || navigator.language || 'en'
   setLanguage(prefer.startsWith('ru') ? 'ru' : 'en')
-  populateLanguageSelect(document.getElementById('lang-select'))
+  const langSelect = document.getElementById('lang-select')
+  if (langSelect) populateLanguageSelect(langSelect)
   setUiTexts()
 
   const audio = new AudioManager([
@@ -49,7 +61,8 @@ async function boot() {
   const input = new Input(canvas)
 
   // UI wiring
-  document.getElementById('btn-new').addEventListener('click', async () => {
+  const btnNew = document.getElementById('btn-new')
+  if (btnNew) btnNew.addEventListener('click', async () => {
     if (AdConfig.interstitialOnNew) tryShowInterstitial()
     game.reset()
     audio.playRandomBgm()
@@ -57,15 +70,17 @@ async function boot() {
     saveState(game)
     tick(performance.now())
   })
-  document.getElementById('btn-restart').addEventListener('click', async () => {
+  const btnRestart = document.getElementById('btn-restart')
+  if (btnRestart) btnRestart.addEventListener('click', async () => {
     if (AdConfig.interstitialOnRestart) tryShowInterstitial()
     game.reset()
     hideOverlay()
     saveState(game)
     tick(performance.now())
   })
-  document.getElementById('btn-continue').addEventListener('click', async () => {
-    const wasGameOver = document.getElementById('overlay-title').textContent === t('gameOver')
+  const btnContinue = document.getElementById('btn-continue')
+  if (btnContinue) btnContinue.addEventListener('click', async () => {
+    const wasGameOver = document.getElementById('overlay-title')?.textContent === t('gameOver')
     if (wasGameOver && AdConfig.rewardedOnContinue) {
       const ok = await Platform.showRewarded()
       if (!ok) return
@@ -74,21 +89,22 @@ async function boot() {
   })
 
   const btnSound = document.getElementById('btn-sound')
-  btnSound.addEventListener('click', () => {
+  if (btnSound) btnSound.addEventListener('click', () => {
     const next = !(btnSound.getAttribute('aria-pressed') === 'true')
     btnSound.setAttribute('aria-pressed', String(next))
     audio.setEnabled(next)
     if (next) audio.playRandomBgm()
   })
 
-  document.getElementById('lang-select').addEventListener('change', (e) => {
+  const langSel = document.getElementById('lang-select')
+  if (langSel) langSel.addEventListener('change', (e) => {
     const val = e.target.value
     setLanguage(val)
     setUiTexts()
   })
 
   const btnAuth = document.getElementById('btn-auth')
-  btnAuth.addEventListener('click', async () => {
+  if (btnAuth) btnAuth.addEventListener('click', async () => {
     const ok = await Platform.auth()
     if (ok) {
       btnAuth.disabled = true
@@ -99,11 +115,11 @@ async function boot() {
   })
   const btnLb = document.getElementById('btn-lb')
   const btnLbClose = document.getElementById('btn-lb-close')
-  btnLb.addEventListener('click', async () => {
+  if (btnLb) btnLb.addEventListener('click', async () => {
     openLeaderboard()
     await renderLeaderboard()
   })
-  btnLbClose.addEventListener('click', closeLeaderboard)
+  if (btnLbClose) btnLbClose.addEventListener('click', closeLeaderboard)
 
   // Input -> Game actions
   input.onMove = (dir) => {
@@ -116,7 +132,7 @@ async function boot() {
     }
   }
 
-  input.onRestart = () => document.getElementById('btn-restart').click()
+  input.onRestart = () => document.getElementById('btn-restart')?.click()
 
   // Resize
   function resize() {
@@ -129,26 +145,28 @@ async function boot() {
   window.addEventListener('resize', resize)
   resize()
 
-  // Start
-  document.getElementById('preloader').classList.add('hidden')
-  document.getElementById('app').classList.remove('hidden')
+  // Reveal UI as soon as possible (cancel safety timeout if present)
+  document.getElementById('preloader')?.classList.add('hidden')
+  document.getElementById('app')?.classList.remove('hidden')
+  if (window.__boot_timeout) { clearTimeout(window.__boot_timeout); window.__boot_timeout = null }
 
-  // Platform init and signal game ready
-  await Platform.init()
-  Platform.signalReady()
-
-  // Try authenticate silently and load cloud save
-  await Platform.auth()
-  const cloud = await Platform.cloudLoad()
-
-  // Load local or cloud state
-  const local = loadState()
-  if (cloud && game.setState(cloud)) { /* loaded cloud */ }
-  else if (local && game.setState(local)) { /* loaded local */ }
-  else { game.reset() }
-
-  updateHud(game)
-  audio.setEnabled(false)
+  // Defer platform init after first paint
+  requestAnimationFrame(async () => {
+    try {
+      await Platform.init()
+      Platform.signalReady()
+      await Platform.auth()
+      const cloud = await Platform.cloudLoad()
+      const local = loadState()
+      if (cloud && game.setState(cloud)) { /* cloud */ }
+      else if (local && game.setState(local)) { /* local */ }
+      else { game.reset() }
+      updateHud(game)
+      audio.setEnabled(false)
+    } catch (e) {
+      console.warn('Deferred platform init failed', e)
+    }
+  })
 
   function tick(ts) {
     const dt = Math.min(33, ts - state.lastTs)
@@ -160,37 +178,44 @@ async function boot() {
 
   // If already authenticated, disable sign in button
   if (Platform.player) {
-    btnAuth.disabled = true
-    btnAuth.textContent = t('signedIn')
+    const b = document.getElementById('btn-auth')
+    if (b) { b.disabled = true; b.textContent = t('signedIn') }
   }
 }
 
 function updateHud(game) {
-  document.getElementById('score').textContent = String(game.score)
+  const scoreEl = document.getElementById('score')
+  if (scoreEl) scoreEl.textContent = String(game.score)
   const best = Math.max(game.score, Number(localStorage.getItem('best') || 0))
-  document.getElementById('best').textContent = String(best)
-  localStorage.setItem('best', String(best))
+  const bestEl = document.getElementById('best')
+  if (bestEl) bestEl.textContent = String(best)
+  try { localStorage.setItem('best', String(best)) } catch {}
 }
 
 function showOverlay(title, sub) {
   const o = document.getElementById('overlay')
-  document.getElementById('overlay-title').textContent = title
-  document.getElementById('overlay-sub').textContent = sub
+  const ot = document.getElementById('overlay-title')
+  const os = document.getElementById('overlay-sub')
+  if (!o || !ot || !os) return
+  ot.textContent = title
+  os.textContent = sub
   o.classList.remove('hidden')
 }
 function hideOverlay() {
-  document.getElementById('overlay').classList.add('hidden')
+  const o = document.getElementById('overlay')
+  if (o) o.classList.add('hidden')
 }
 
 function openLeaderboard() {
-  document.getElementById('lb-overlay').classList.remove('hidden')
+  document.getElementById('lb-overlay')?.classList.remove('hidden')
 }
 function closeLeaderboard() {
-  document.getElementById('lb-overlay').classList.add('hidden')
+  document.getElementById('lb-overlay')?.classList.add('hidden')
 }
 async function renderLeaderboard() {
   const list = document.getElementById('lb-list')
-  list.innerHTML = `<div class=\"row\">${t('loadingLb')}</div>`
+  if (!list) return
+  list.innerHTML = `<div class="row">${t('loadingLb')}</div>`
   const entries = await Platform.getLeaderboardTop(10)
   if (!entries.length) { list.innerHTML = `<div class=\"row\">${t('noLbData')}</div>`; return }
   list.innerHTML = ''
@@ -219,5 +244,6 @@ function loadState() {
 
 boot().catch((err) => {
   console.error(err)
-  document.getElementById('preloader-text').textContent = 'Failed to load'
+  const pl = document.getElementById('preloader-text')
+  if (pl) pl.textContent = 'Failed to load'
 })

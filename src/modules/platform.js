@@ -8,16 +8,28 @@ export const Platform = {
     const q = new URLSearchParams(location.search)
     if (q.get('lb')) this.config.leaderboardId = q.get('lb')
 
-    if (window.YaGames || q.get('platform') === 'yandex') this.env = 'yandex'
-    else if (window.samsungInstant || q.get('platform') === 'samsung') this.env = 'samsung'
-    else if (window.YTPlayable || q.get('platform') === 'youtube') this.env = 'youtube'
+    // Try to detect from query or globals; be permissive
+    if (q.get('platform') === 'yandex' || window.YaGames) this.env = 'yandex'
+    else if (q.get('platform') === 'samsung' || window.samsungInstant) this.env = 'samsung'
+    else if (q.get('platform') === 'youtube' || window.YTPlayable) this.env = 'youtube'
     else this.env = 'web'
 
     try {
       if (this.env === 'yandex') {
+        // Even if YaGames not present yet, attempt to load it
         await this.ensureYandexSdk()
         this.ysdk = await window.YaGames.init()
         try { this.player = await this.ysdk.getPlayer({ scopes: true }) } catch {}
+      } else {
+        // If not explicitly yandex but SDK is available, set it up
+        if (window.YaGames?.init) {
+          try {
+            await this.ensureYandexSdk()
+            this.ysdk = await window.YaGames.init()
+            this.env = 'yandex'
+            try { this.player = await this.ysdk.getPlayer({ scopes: true }) } catch {}
+          } catch {}
+        }
       }
       if (this.env === 'samsung') {
         // placeholder for samsung instant play sdk init

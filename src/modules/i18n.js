@@ -1,12 +1,22 @@
 const dictionaries = {}
 let current = 'en'
 
+function fetchWithTimeout(resource, options = {}) {
+  const { timeout = 1200 } = options
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error('timeout')), timeout)
+    fetch(resource)
+      .then((res) => { clearTimeout(id); resolve(res) })
+      .catch((err) => { clearTimeout(id); reject(err) })
+  })
+}
+
 export async function loadI18n(locales) {
   await Promise.all(
     locales.map(async (loc) => {
       const url = `src/i18n/${loc}.json`
       try {
-        const res = await fetch(url)
+        const res = await fetchWithTimeout(url, { timeout: 1200 })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         dictionaries[loc] = await res.json()
       } catch (e) {

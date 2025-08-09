@@ -18,7 +18,21 @@
     <link rel="preload" as="image" href="digit 512.png" />
     <link rel="preload" as="image" href="digit 1024.png" />
     <link rel="preload" as="image" href="digit 2048.png" />
-    <link rel="stylesheet" href="styles.css" />
+    <!-- Make stylesheet non-blocking -->
+    <link rel="preload" href="styles.css" as="style" onload="this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css"></noscript>
+    <!-- Speed up potential Yandex SDK/connects -->
+    <link rel="preconnect" href="https://yandex.ru" crossorigin>
+    <link rel="preconnect" href="https://yandex.ru/games" crossorigin>
+    <!-- Minimal critical CSS for early paint (preloader + base) -->
+    <style>
+      html,body{height:100%}
+      body{margin:0;background:#000;color:#c9f5ff;font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+      .hidden{display:none}
+      .preloader{position:fixed;inset:0;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;background:#000}
+      .spinner{width:42px;height:42px;border-radius:50%;border:4px solid rgba(255,255,255,.12);border-top-color:#00e0ff;animation:spin .9s linear infinite}
+      @keyframes spin{to{transform:rotate(360deg)}}
+    </style>
   </head>
   <body>
     <div id="preloader" class="preloader">
@@ -73,6 +87,8 @@
       </footer>
     </div>
 
+    <!-- Safety: force show UI if init stalls -->
+    <script>window.__boot_timeout=setTimeout(function(){try{var pre=document.getElementById('preloader');var app=document.getElementById('app');if(pre)pre.classList.add('hidden');if(app)app.classList.remove('hidden');window.parent&&window.parent.postMessage({type:'game_ready'},'*')}catch(e){}},4000);</script>
     <script type="module" src="src/main.js"></script>
   </body>
 </html>
