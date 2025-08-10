@@ -17,5 +17,19 @@
   "leaderboard": "Leaderboard",
   "loadingLb": "Loading leaderboard…",
   "noLbData": "No leaderboard data",
-  "close": "Close"
+  "close": "Close",
+  "musicVolume": "Music volume",
+  "musicTrack": "Music track",
+  "nextTrack": "Next",
+  "prevTrack": "Prev",
+  "achievements": "Achievements",
+  "achievementUnlocked": "Achievement unlocked: {name}",
+  "ach_128": "Reach tile 128",
+  "ach_256": "Reach tile 256",
+  "ach_512": "Reach tile 512",
+  "ach_1024": "Reach tile 1024",
+  "ach_2048": "Reach tile 2048",
+  "ach_score_1000": "Score 1000 points",
+  "ach_score_5000": "Score 5000 points",
+  "ach_win": "Win a game"
 }

@@ -1,4 +1,4 @@
-:root{--bg:#05060a;--bg2:#0a0e14;--grid:#0f1420;--text:#c9f5ff;--muted:#6ad1e3;--accent:#00e0ff;--accent2:#ff00d4;--good:#00ffc6;--bad:#ff6176;--shadow:0 0 24px rgba(0,224,255,.35),0 0 64px rgba(255,0,212,.22)}*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:#000 url("bg6.png") center/cover no-repeat fixed;color:var(--text);font:16px/1.4 Inter,system-ui,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+:root{--bg:#05060a;--bg2:#0a0e14;--grid:#0f1420;--text:#c9f5ff;--muted:#6ad1e3;--accent:#00e0ff;--accent2:#ff00d4;--good:#00ffc6;--bad:#ff6176;--shadow:0 0 24px rgba(0,224,255,.35),0 0 64px rgba(255,0,212,.22)}*{box-sizing:border-box}html,body{height:100%}body{margin:0;min-height:100vh;background:#000 url("bg6.png") center/cover no-repeat fixed;color:var(--text);font:16px/1.4 Inter,system-ui,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
 .hidden{display:none}
 .hud{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(180deg,rgba(0,0,0,.6),rgba(0,0,0,.2));backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,.08)}
 .brand{display:flex;align-items:center;gap:12px}
@@ -28,4 +28,13 @@
 .lb-list .rank{color:var(--accent)}
 .lb-list .name{max-width:44vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lb-list .score{font-weight:700;color:#c8ffee}
+.form-row{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:10px 0}
+.track-controls{display:flex;gap:8px;align-items:center;justify-content:center}
+.ach-list{max-height:50vh;overflow:auto;text-align:left;margin:8px 0;padding-right:4px}
+.ach-list .row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px dashed rgba(255,255,255,.08)}
+.ach-list .name{color:#dff9ff}
+.ach-list .status{font-weight:700}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:rgba(10,14,20,.9);border:1px solid rgba(255,255,255,.12);padding:10px 14px;border-radius:12px;box-shadow:var(--shadow);z-index:9999;transition:opacity .2s ease}
 @media (max-width:520px){.title{font-size:16px}.hud{gap:8px}.stat strong{font-size:14px}}
+/* Improve background reliability on mobile (avoid fixed attachment issues) */
+@media (max-width: 800px),(pointer:coarse){body{background-attachment:scroll;background-position:center top}}
