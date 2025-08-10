@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#000000" />
     <title>Киберпанк 2048</title>
     
     <link rel="preload" as="style" href="styles.css" id="styles-preload">
+    <link rel="modulepreload" href="src/main.js">
     <!-- Speed up potential Yandex SDK/connects -->
     <link rel="preconnect" href="https://yandex.ru" crossorigin>
     <link rel="preconnect" href="https://yandex.ru/games" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <!-- Preload fallback background only to reduce bandwidth; others load on demand -->
     <link rel="preload" as="image" href="bg6.png">
     <!-- Minimal critical CSS for early paint (preloader + base) -->

@@ -13,7 +13,15 @@ const tileSrcByValue = new Map([
 ])
 
 function loadImage(src) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (window.createImageBitmap) {
+        const res = await fetch(src)
+        const blob = await res.blob()
+        const bmp = await createImageBitmap(blob)
+        return resolve(bmp)
+      }
+    } catch {}
     const img = new Image()
     try { img.decoding = 'async' } catch {}
     img.src = src

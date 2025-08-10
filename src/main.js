@@ -7,6 +7,12 @@ import { Platform } from './modules/platform.js'
 import { AdConfig } from './config.js'
 import { Achievements } from './modules/achievements.js'
 
+// Prevent page scrolling globally
+try {
+  window.addEventListener('wheel', (e) => { e.preventDefault() }, { passive: false })
+  window.addEventListener('touchmove', (e) => { e.preventDefault() }, { passive: false })
+} catch {}
+
 const canvas = document.getElementById('game-canvas')
 const ctx = canvas.getContext('2d', { alpha: true })
 
