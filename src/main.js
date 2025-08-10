@@ -272,6 +272,19 @@ async function boot() {
   document.getElementById('app')?.classList.remove('hidden')
   if (window.__boot_timeout) { clearTimeout(window.__boot_timeout); window.__boot_timeout = null }
 
+  // Set random cyber background
+  try {
+    const bgs = ['bg6.png','background17.png','background18.png','background19.png']
+    const pick = bgs[Math.floor(Math.random() * bgs.length)]
+    document.body.style.backgroundImage = `url(${pick})`
+  } catch {}
+
+  // Block page scroll fully
+  try {
+    window.addEventListener('wheel', (e) => e.preventDefault(), { passive: false })
+    window.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false })
+  } catch {}
+
   // Defer platform init after first paint
   requestAnimationFrame(async () => {
     try {
