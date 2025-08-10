@@ -17,6 +17,7 @@ export class Input {
 
     let sx = 0, sy = 0, tracking = false
     const threshold = 16
+    let swipeDelayTimer = null
     target.addEventListener('touchstart', (e) => {
       const t = e.touches[0]
       sx = t.clientX; sy = t.clientY; tracking = true
@@ -29,9 +30,10 @@ export class Input {
       if (Math.hypot(dx, dy) > threshold) {
         const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up')
         tracking = false
-        this.onMove && this.onMove(dir)
+        clearTimeout(swipeDelayTimer)
+        swipeDelayTimer = setTimeout(() => { this.onMove && this.onMove(dir) }, 70)
       }
     }, { passive: true })
-    target.addEventListener('touchend', () => { tracking = false }, { passive: true })
+    target.addEventListener('touchend', () => { tracking = false; clearTimeout(swipeDelayTimer) }, { passive: true })
   }
 }

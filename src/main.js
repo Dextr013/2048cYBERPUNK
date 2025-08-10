@@ -17,6 +17,12 @@ const state = {
   lastInterstitial: 0,
   achievements: null,
   audio: null,
+  mode: 'classic',
+  timerMs: 0,
+  hardInterval: null,
+  startedAt: 0,
+  reached512At: null,
+  enduranceShown: false,
 }
 
 function setUiTexts() {
@@ -26,6 +32,8 @@ function setUiTexts() {
   })
   const pl = document.getElementById('preloader-text')
   if (pl) pl.textContent = t('loading')
+  // Force game name everywhere
+  try { document.title = t('title') } catch {}
 }
 
 function tryShowInterstitial() {
@@ -40,6 +48,18 @@ async function withTimeout(promise, ms) {
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
   ])
+}
+
+function applyModeUi() {
+  const timerWrap = document.getElementById('timer-wrap')
+  if (timerWrap) timerWrap.style.display = state.mode === 'timed' ? 'flex' : 'none'
+}
+
+function formatTime(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000))
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${m}:${String(sec).padStart(2, '0')}`
 }
 
 async function boot() {
@@ -75,6 +95,12 @@ async function boot() {
     if (tid) await audio.play(tid)
   } catch {}
 
+  // Restore mode
+  try {
+    const m = localStorage.getItem('mode')
+    if (m === 'classic' || m === 'timed' || m === 'hard') state.mode = m
+  } catch {}
+
   const game = new Game()
   const renderer = new Renderer(canvas)
   const input = new Input(canvas)
@@ -85,8 +111,8 @@ async function boot() {
   const btnNew = document.getElementById('btn-new')
   if (btnNew) btnNew.addEventListener('click', async () => {
     if (AdConfig.interstitialOnNew) tryShowInterstitial()
-    game.reset()
-    audio.playRandomBgm()
+    startNewRun(game, renderer)
+    state.audio.playRandomBgm()
     hideOverlay()
     saveState(game)
     tick(performance.now())
@@ -94,7 +120,7 @@ async function boot() {
   const btnRestart = document.getElementById('btn-restart')
   if (btnRestart) btnRestart.addEventListener('click', async () => {
     if (AdConfig.interstitialOnRestart) tryShowInterstitial()
-    game.reset()
+    startNewRun(game, renderer)
     hideOverlay()
     saveState(game)
     tick(performance.now())
@@ -126,6 +152,18 @@ async function boot() {
     populateTrackSelect(audio)
     renderAchievementsList(achievements)
   })
+
+  const modeSel = document.getElementById('mode-select')
+  if (modeSel) {
+    modeSel.value = state.mode
+    modeSel.addEventListener('change', (e) => {
+      state.mode = e.target.value
+      try { localStorage.setItem('mode', state.mode) } catch {}
+      applyModeUi()
+      // restart run to apply rules cleanly
+      startNewRun(game, renderer)
+    })
+  }
 
   const btnAuth = document.getElementById('btn-auth')
   if (btnAuth) btnAuth.addEventListener('click', async () => {
@@ -189,8 +227,25 @@ async function boot() {
 
   // Input -> Game actions
   input.onMove = (dir) => {
+    if (state.mode === 'timed' && state.timerMs <= 0) return
     const result = game.move(dir)
     if (result.moved) {
+      if (result.moves?.length) renderer.animateSlides(result.moves)
+      // Visuals: bounce merged, pulse spawn
+      if (result.mergesPositions?.length) renderer.bumpTiles(result.mergesPositions)
+      if (result.spawnedAt) renderer.pulseSpawn(result.spawnedAt[0], result.spawnedAt[1])
+
+      // Combo toast
+      if (result.mergesCount >= 2) {
+        showToast(`${t('combo')} ${result.mergesCount}!`)
+      }
+      // 512 under 30 sec challenge toast
+      if (!state.reached512At && getMaxTile(game) >= 512) {
+        const elapsed = Date.now() - state.startedAt
+        state.reached512At = Date.now()
+        if (elapsed <= 30000) showToast(t('fast512'))
+      }
+
       updateHud(game)
       saveState(game)
       achievements.check(game)
@@ -227,7 +282,7 @@ async function boot() {
       const local = loadState()
       if (cloud && game.setState(cloud)) { /* cloud */ }
       else if (local && game.setState(local)) { /* local */ }
-      else { game.reset() }
+      else { startNewRun(game, renderer) }
       updateHud(game)
       audio.setEnabled(false)
       achievements.check(game)
@@ -239,6 +294,27 @@ async function boot() {
   function tick(ts) {
     const dt = Math.min(33, ts - state.lastTs)
     state.lastTs = ts
+
+    // Timer for modes
+    if (state.mode === 'timed') {
+      if (state.timerMs > 0) {
+        state.timerMs -= dt
+        const tl = document.getElementById('time-left')
+        if (tl) tl.textContent = formatTime(state.timerMs)
+        if (state.timerMs <= 0) {
+          state.timerMs = 0
+          showOverlay(t('timeUp'), `${t('score')}: ${game.score}`)
+          Platform.submitScore(game.score)
+        }
+      }
+    }
+
+    // Endurance 5 minutes
+    if (!state.enduranceShown && Date.now() - state.startedAt >= 5 * 60 * 1000) {
+      state.enduranceShown = true
+      showToast(t('endurance5'))
+    }
+
     renderer.render(game)
     requestAnimationFrame(tick)
   }
@@ -249,6 +325,39 @@ async function boot() {
     const b = document.getElementById('btn-auth')
     if (b) { b.disabled = true; b.textContent = t('signedIn') }
   }
+
+  applyModeUi()
+}
+
+function startNewRun(game, renderer) {
+  const lastSpawn = game.reset()
+  state.startedAt = Date.now()
+  state.reached512At = null
+  state.enduranceShown = false
+  if (state.hardInterval) { clearInterval(state.hardInterval); state.hardInterval = null }
+  if (state.mode === 'timed') {
+    state.timerMs = 120000
+  } else {
+    state.timerMs = 0
+  }
+  if (state.mode === 'hard') {
+    state.hardInterval = setInterval(() => {
+      const added = game.addRandomBlocker()
+      if (added) {
+        // small visual cue
+        renderer.bumpTiles([added])
+        showToast(t('blockerSpawned'))
+      }
+    }, 30000)
+  }
+  // pulse last spawned tile from reset
+  if (lastSpawn) renderer.pulseSpawn(lastSpawn[0], lastSpawn[1])
+}
+
+function getMaxTile(game) {
+  let max = 0
+  for (let r = 0; r < game.size; r++) for (let c = 0; c < game.size; c++) max = Math.max(max, game.grid[r][c])
+  return max
 }
 
 function updateHud(game) {
@@ -360,9 +469,13 @@ function showToast(message) {
   if (!el) return
   el.textContent = message
   el.classList.remove('hidden')
-  el.style.opacity = '1'
+  // slide in
+  el.classList.add('show')
   clearTimeout(showToast._t)
-  showToast._t = setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.classList.add('hidden'), 250) }, 1800)
+  showToast._t = setTimeout(() => {
+    el.classList.remove('show')
+    setTimeout(() => el.classList.add('hidden'), 400)
+  }, 3000)
 }
 
 boot().catch((err) => {

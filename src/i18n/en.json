@@ -1,5 +1,5 @@
 {
-  "title": "2048 Cybergrid",
+  "title": "Киберпанк 2048",
   "newGame": "New Game",
   "score": "Score",
   "best": "Best",
@@ -31,5 +31,15 @@
   "ach_2048": "Reach tile 2048",
   "ach_score_1000": "Score 1000 points",
   "ach_score_5000": "Score 5000 points",
-  "ach_win": "Win a game"
+  "ach_win": "Win a game",
+  "mode": "Mode",
+  "modeClassic": "Classic",
+  "modeTimed": "Timed",
+  "modeHard": "Hard",
+  "timeLeft": "Time",
+  "timeUp": "Time is up!",
+  "combo": "Combo",
+  "fast512": "512 in 30s!",
+  "endurance5": "Endurance 5 minutes!",
+  "blockerSpawned": "Blocker spawned!"
 }
