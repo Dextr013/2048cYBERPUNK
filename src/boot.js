@@ -12,6 +12,18 @@
     } catch (e) {}
 
     try {
+      // Force visibility in case a container applied hidden styles
+      if (document.documentElement && document.documentElement.style) {
+        document.documentElement.style.visibility = 'visible';
+        document.documentElement.style.opacity = '1';
+      }
+      if (document.body && document.body.style) {
+        document.body.style.visibility = 'visible';
+        document.body.style.opacity = '1';
+      }
+    } catch (e) {}
+
+    try {
       if (window.YaGames && window.YaGames.init) {
         window.YaGames
           .init()
@@ -46,10 +58,11 @@
   }
 
   if (document.readyState !== 'loading') {
-    setTimeout(markReady, 1200);
+    // Fire immediately when DOM is ready
+    markReady();
   } else {
     document.addEventListener('DOMContentLoaded', function () {
-      setTimeout(markReady, 1200);
+      markReady();
     });
   }
 
