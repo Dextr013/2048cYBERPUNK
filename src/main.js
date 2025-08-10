@@ -276,7 +276,7 @@ async function boot() {
   try {
     const bgs = ['bg6.png','background17.png','background18.png','background19.png']
     const pick = bgs[Math.floor(Math.random() * bgs.length)]
-    document.body.style.backgroundImage = `url(${pick})`
+    document.body.style.background = `#000 url("${pick}") center/cover no-repeat fixed`
   } catch {}
 
   // Block page scroll fully
