@@ -85,12 +85,46 @@
             </div>
           </div>
         </div>
+        <div id="settings-overlay" class="overlay hidden">
+          <div class="overlay-content">
+            <div class="overlay-title" data-i18n="settings">Settings</div>
+            <div class="form-row">
+              <label for="volume-range" data-i18n="musicVolume">Music volume</label>
+              <input id="volume-range" type="range" min="0" max="100" value="60" />
+            </div>
+            <div class="form-row">
+              <label data-i18n="musicTrack">Music track</label>
+              <div class="track-controls">
+                <button id="btn-prev-track" class="btn" data-i18n="prevTrack">Prev</button>
+                <select id="track-select" class="select"></select>
+                <button id="btn-next-track" class="btn" data-i18n="nextTrack">Next</button>
+              </div>
+            </div>
+            <div class="form-row">
+              <button id="btn-achievements" class="btn" data-i18n="achievements">Achievements</button>
+            </div>
+            <div class="overlay-actions">
+              <button id="btn-settings-close" class="btn" data-i18n="close">Close</button>
+            </div>
+          </div>
+        </div>
+        <div id="ach-overlay" class="overlay hidden">
+          <div class="overlay-content">
+            <div class="overlay-title" data-i18n="achievements">Achievements</div>
+            <div id="ach-list" class="ach-list"></div>
+            <div class="overlay-actions">
+              <button id="btn-ach-close" class="btn" data-i18n="close">Close</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <footer class="footer">
         <span>© 2025</span>
       </footer>
     </div>
+
+    <div id="toast" class="toast hidden"></div>
 
     <script type="module" src="src/main.js"></script>
   </body>

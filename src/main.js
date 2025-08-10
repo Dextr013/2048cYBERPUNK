@@ -5,6 +5,7 @@ import { Renderer } from './modules/renderer.js'
 import { Input } from './modules/input.js'
 import { Platform } from './modules/platform.js'
 import { AdConfig } from './config.js'
+import { Achievements } from './modules/achievements.js'
 
 const canvas = document.getElementById('game-canvas')
 const ctx = canvas.getContext('2d', { alpha: false })
@@ -14,6 +15,8 @@ const state = {
   lastTs: 0,
   locale: 'ru',
   lastInterstitial: 0,
+  achievements: null,
+  audio: null,
 }
 
 function setUiTexts() {
@@ -63,10 +66,20 @@ async function boot() {
     { id: 'bgm2', src: 'minimum.ogg', type: 'music' },
     { id: 'bgm3', src: 'malfunction.ogg', type: 'music' },
   ])
+  state.audio = audio
+  // Restore saved audio prefs
+  try {
+    const vol = Number(localStorage.getItem('volume'))
+    if (!Number.isNaN(vol)) audio.setVolume(vol / 100)
+    const tid = localStorage.getItem('trackId')
+    if (tid) await audio.play(tid)
+  } catch {}
 
   const game = new Game()
   const renderer = new Renderer(canvas)
   const input = new Input(canvas)
+  const achievements = new Achievements()
+  state.achievements = achievements
 
   // UI wiring
   const btnNew = document.getElementById('btn-new')
@@ -109,6 +122,9 @@ async function boot() {
     const val = e.target.value
     setLanguage(val)
     setUiTexts()
+    // Refresh dynamic lists
+    populateTrackSelect(audio)
+    renderAchievementsList(achievements)
   })
 
   const btnAuth = document.getElementById('btn-auth')
@@ -129,12 +145,55 @@ async function boot() {
   })
   if (btnLbClose) btnLbClose.addEventListener('click', closeLeaderboard)
 
+  // Settings overlay wiring
+  const btnSettings = document.getElementById('btn-settings')
+  const settingsOverlay = document.getElementById('settings-overlay')
+  const btnSettingsClose = document.getElementById('btn-settings-close')
+  const volumeRange = document.getElementById('volume-range')
+  const trackSelect = document.getElementById('track-select')
+  const btnNextTrack = document.getElementById('btn-next-track')
+  const btnPrevTrack = document.getElementById('btn-prev-track')
+  const btnAchievements = document.getElementById('btn-achievements')
+  if (btnSettings) btnSettings.addEventListener('click', () => { settingsOverlay?.classList.remove('hidden') })
+  if (btnSettingsClose) btnSettingsClose.addEventListener('click', () => { settingsOverlay?.classList.add('hidden') })
+  if (volumeRange) {
+    try {
+      const vol = Number(localStorage.getItem('volume'))
+      if (!Number.isNaN(vol)) volumeRange.value = String(vol)
+    } catch {}
+    volumeRange.addEventListener('input', (e) => {
+      const v = Number(e.target.value)
+      audio.setVolume(v / 100)
+    })
+  }
+  if (trackSelect) {
+    populateTrackSelect(audio)
+    trackSelect.addEventListener('change', async (e) => {
+      const id = e.target.value
+      await audio.play(id)
+      ensureSoundToggleReflects(btnSound, audio)
+    })
+  }
+  if (btnNextTrack) btnNextTrack.addEventListener('click', async () => { await audio.nextTrack(); selectCurrentTrack(trackSelect, audio) })
+  if (btnPrevTrack) btnPrevTrack.addEventListener('click', async () => { await audio.prevTrack(); selectCurrentTrack(trackSelect, audio) })
+  if (btnAchievements) btnAchievements.addEventListener('click', () => { renderAchievementsList(achievements); openAchievements() })
+
+  // Achievements overlay
+  const achOverlay = document.getElementById('ach-overlay')
+  const btnAchClose = document.getElementById('btn-ach-close')
+  if (btnAchClose) btnAchClose.addEventListener('click', () => { achOverlay?.classList.add('hidden') })
+  achievements.onUnlock = (def) => {
+    showToast(t('achievementUnlocked', { name: t(def.id) }))
+    renderAchievementsList(achievements)
+  }
+
   // Input -> Game actions
   input.onMove = (dir) => {
     const result = game.move(dir)
     if (result.moved) {
       updateHud(game)
       saveState(game)
+      achievements.check(game)
       if (result.won) { showOverlay(t('youWin'), t('mergeTo', { value: 2048 })); Platform.submitScore(game.score) }
       else if (game.isGameOver()) { showOverlay(t('gameOver'), t('noMoves')); Platform.submitScore(game.score); if (AdConfig.interstitialOnGameOver) tryShowInterstitial() }
     }
@@ -171,6 +230,7 @@ async function boot() {
       else { game.reset() }
       updateHud(game)
       audio.setEnabled(false)
+      achievements.check(game)
     } catch (e) {
       console.warn('Deferred platform init failed', e)
     }
@@ -248,6 +308,61 @@ function loadState() {
     if (!raw) return null
     return JSON.parse(raw)
   } catch { return null }
+}
+
+function populateTrackSelect(audio) {
+  const select = document.getElementById('track-select')
+  if (!select) return
+  const tracks = audio.getMusicTracks()
+  select.innerHTML = ''
+  for (const t of tracks) {
+    const opt = document.createElement('option')
+    opt.value = t.id
+    opt.textContent = t.id
+    if (audio.getCurrentTrackId() === t.id) opt.selected = true
+    select.appendChild(opt)
+  }
+}
+
+function selectCurrentTrack(select, audio) {
+  if (!select) return
+  const id = audio.getCurrentTrackId()
+  if (!id) return
+  for (const opt of select.options) { opt.selected = (opt.value === id) }
+}
+
+function ensureSoundToggleReflects(btn, audio) {
+  if (!btn) return
+  btn.setAttribute('aria-pressed', String(audio.enabled))
+}
+
+function openAchievements() {
+  document.getElementById('ach-overlay')?.classList.remove('hidden')
+}
+
+function renderAchievementsList(ach) {
+  const list = document.getElementById('ach-list')
+  if (!list) return
+  list.innerHTML = ''
+  for (const def of ach.getAll()) {
+    const row = document.createElement('div')
+    row.className = 'row'
+    const name = t(def.id)
+    const status = ach.isUnlocked(def.id) ? '✓' : '…'
+    row.innerHTML = `<span class="name"></span><span class="status">${status}</span>`
+    row.querySelector('.name').textContent = name
+    list.appendChild(row)
+  }
+}
+
+function showToast(message) {
+  const el = document.getElementById('toast')
+  if (!el) return
+  el.textContent = message
+  el.classList.remove('hidden')
+  el.style.opacity = '1'
+  clearTimeout(showToast._t)
+  showToast._t = setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.classList.add('hidden'), 250) }, 1800)
 }
 
 boot().catch((err) => {
