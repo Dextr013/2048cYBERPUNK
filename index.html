@@ -18,7 +18,7 @@
     <link rel="preload" as="image" href="digit 512.png" />
     <link rel="preload" as="image" href="digit 1024.png" />
     <link rel="preload" as="image" href="digit 2048.png" />
-    <link rel="stylesheet" href="styles.css">
+    <link rel="preload" as="style" href="styles.css" id="styles-preload">
     <!-- Speed up potential Yandex SDK/connects -->
     <link rel="preconnect" href="https://yandex.ru" crossorigin>
     <link rel="preconnect" href="https://yandex.ru/games" crossorigin>
@@ -31,24 +31,13 @@
       .spinner{width:42px;height:42px;border-radius:50%;border:4px solid rgba(255,255,255,.12);border-top-color:#00e0ff;animation:spin .9s linear infinite}
       @keyframes spin{to{transform:rotate(360deg)}}
     </style>
-    <script>
-      (function(){
-        var done=false;
-        function markReady(){
-          if(done) return; done=true;
-          try{var pre=document.getElementById('preloader'); var app=document.getElementById('app'); if(pre) pre.classList.add('hidden'); if(app) app.classList.remove('hidden');}catch(e){}
-          try{ if(window.YaGames && window.YaGames.init){ window.YaGames.init().then(function(y){ try{ y && y.features && y.features.LoadingAPI && y.features.LoadingAPI.ready && y.features.LoadingAPI.ready(); }catch(e){} }).catch(function(){}); } }catch(e){}
-          try{ window.dispatchEvent(new Event('gameready')); }catch(e){}
-          try{ window.parent && window.parent.postMessage({ type:'game_ready' }, '*'); }catch(e){}
-        }
-        function poll(){ if(done) return; if(window.YaGames && window.YaGames.init){ markReady(); return; } setTimeout(poll,150); }
-        if(document.readyState !== 'loading'){ setTimeout(markReady, 1200); } else { document.addEventListener('DOMContentLoaded', function(){ setTimeout(markReady, 1200); }); }
-        try{ poll(); }catch(e){}
-        window.__boot_timeout = setTimeout(markReady, 4000);
-      })();
-    </script>
+    <script src="src/boot.js" defer></script>
   </head>
   <body>
+    <noscript>
+      <style> .preloader{display:none!important} .hidden{display:block!important} </style>
+      <div style="padding:16px;color:#fff;background:#000">This game requires JavaScript.</div>
+    </noscript>
     <div id="preloader" class="preloader">
       <div class="spinner"></div>
       <div id="preloader-text">Loading…</div>
