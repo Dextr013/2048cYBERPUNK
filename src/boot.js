@@ -16,10 +16,12 @@
       if (document.documentElement && document.documentElement.style) {
         document.documentElement.style.visibility = 'visible';
         document.documentElement.style.opacity = '1';
+        document.documentElement.style.display = 'block';
       }
       if (document.body && document.body.style) {
         document.body.style.visibility = 'visible';
         document.body.style.opacity = '1';
+        document.body.style.display = 'block';
       }
     } catch (e) {}
 
