@@ -15,6 +15,7 @@ const tileSrcByValue = new Map([
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image()
+    try { img.decoding = 'async' } catch {}
     img.src = src
     img.onload = () => resolve(img)
     img.onerror = reject
@@ -53,7 +54,7 @@ export class Renderer {
     const startX = (canvas.width - size) / 2
     const startY = (canvas.height - size) / 2
 
-    // Grid background glow
+    // Grid background glow (confined to board area)
     const bgGrad = ctx.createRadialGradient(
       canvas.width / 2,
       canvas.height / 2,
@@ -65,7 +66,8 @@ export class Renderer {
     bgGrad.addColorStop(0, 'rgba(0,224,255,0.08)')
     bgGrad.addColorStop(1, 'rgba(255,0,212,0.06)')
     ctx.fillStyle = bgGrad
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    const glowPad = pad * 0.6
+    ctx.fillRect(startX - glowPad, startY - glowPad, size + glowPad * 2, size + glowPad * 2)
 
     // Cells
     for (let r = 0; r < n; r++) {

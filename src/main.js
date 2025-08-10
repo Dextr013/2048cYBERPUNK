@@ -285,12 +285,6 @@ async function boot() {
     document.body.style.backgroundAttachment = (isCoarse || window.innerWidth <= 800) ? 'scroll' : 'fixed'
   } catch {}
 
-  // Block page scroll fully
-  try {
-    window.addEventListener('wheel', (e) => e.preventDefault(), { passive: false })
-    window.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false })
-  } catch {}
-
   // Defer platform init after first paint
   requestAnimationFrame(async () => {
     try {
@@ -498,7 +492,5 @@ function showToast(message) {
 }
 
 boot().catch((err) => {
-  console.error(err)
-  const pl = document.getElementById('preloader-text')
-  if (pl) pl.textContent = 'Failed to load'
+  console.warn('boot failed', err)
 })
