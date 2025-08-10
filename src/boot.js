@@ -53,11 +53,36 @@
   function poll() {
     if (done) return;
     if (window.YaGames && window.YaGames.init) {
+      // Call ready ASAP once SDK appears
+      try {
+        window.YaGames.init().then(function (y) {
+          try { y?.features?.LoadingAPI?.ready?.(); } catch (e) {}
+        }).catch(function () {});
+      } catch (e) {}
       markReady();
       return;
     }
     setTimeout(poll, 150);
   }
+
+  // Proactively load Yandex SDK early to avoid container-held preloaders
+  try {
+    if (!window.YaGames || !window.YaGames.init) {
+      var s = document.createElement('script');
+      s.src = 'https://yandex.ru/games/sdk/v2';
+      s.async = true;
+      s.onload = function () {
+        try {
+          window.YaGames && window.YaGames.init && window.YaGames.init().then(function (y) {
+            try { y?.features?.LoadingAPI?.ready?.(); } catch (e) {}
+            markReady();
+          }).catch(function () { markReady(); });
+        } catch (e) { markReady(); }
+      };
+      s.onerror = function () { markReady(); };
+      document.head.appendChild(s);
+    }
+  } catch (e) {}
 
   if (document.readyState !== 'loading') {
     // Fire immediately when DOM is ready
@@ -85,10 +110,10 @@
       l.href = preload.getAttribute('href');
       preload.replaceWith(l);
     } else {
-      var s = document.createElement('link');
-      s.rel = 'stylesheet';
-      s.href = 'styles.css';
-      document.head.appendChild(s);
+      var s2 = document.createElement('link');
+      s2.rel = 'stylesheet';
+      s2.href = 'styles.css';
+      document.head.appendChild(s2);
     }
   } catch (e) {}
 })();
