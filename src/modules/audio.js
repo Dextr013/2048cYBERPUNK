@@ -29,11 +29,16 @@ export class AudioManager {
     return this.currentId
   }
 
+  setCurrentId(id) {
+    this.currentId = id
+    try { localStorage.setItem('trackId', id) } catch {}
+  }
+
   async ensureLoaded(track) {
     if (track.el) return track.el
     const audio = new Audio(track.src)
     audio.loop = track.type === 'music'
-    audio.preload = 'auto'
+    audio.preload = this.enabled ? 'auto' : 'metadata'
     audio.volume = this.volume
     track.el = audio
     return audio
@@ -43,6 +48,10 @@ export class AudioManager {
     const mus = this.getMusicTracks()
     if (mus.length === 0) return
     const pick = mus[Math.floor(Math.random() * mus.length)]
+    if (!this.enabled) {
+      this.setCurrentId(pick.id)
+      return
+    }
     await this.play(pick.id)
   }
 
@@ -50,6 +59,10 @@ export class AudioManager {
     const track = this.tracks.find((t) => t.id === id)
     if (!track) return
     this.currentId = id
+    if (!this.enabled) {
+      try { localStorage.setItem('trackId', id) } catch {}
+      return
+    }
     await this.ensureLoaded(track)
     this.stop()
     this.current = track.el

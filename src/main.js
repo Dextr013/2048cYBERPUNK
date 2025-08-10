@@ -87,12 +87,12 @@ async function boot() {
     { id: 'bgm3', src: 'malfunction.ogg', type: 'music' },
   ])
   state.audio = audio
-  // Restore saved audio prefs
+  // Restore saved audio prefs without downloading large files yet
   try {
     const vol = Number(localStorage.getItem('volume'))
     if (!Number.isNaN(vol)) audio.setVolume(vol / 100)
     const tid = localStorage.getItem('trackId')
-    if (tid) await audio.play(tid)
+    if (tid) audio.setCurrentId(tid)
   } catch {}
 
   // Restore mode
@@ -272,11 +272,17 @@ async function boot() {
   document.getElementById('app')?.classList.remove('hidden')
   if (window.__boot_timeout) { clearTimeout(window.__boot_timeout); window.__boot_timeout = null }
 
-  // Set random cyber background
+  // Set random cyber background reliably on all devices
   try {
     const bgs = ['bg6.png','background17.png','background18.png','background19.png']
     const pick = bgs[Math.floor(Math.random() * bgs.length)]
-    document.body.style.background = `#000 url("${pick}") center/cover no-repeat fixed`
+    const isCoarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches
+    document.body.style.backgroundColor = '#000'
+    document.body.style.backgroundImage = `url("${pick}")`
+    document.body.style.backgroundRepeat = 'no-repeat'
+    document.body.style.backgroundPosition = 'center'
+    document.body.style.backgroundSize = 'cover'
+    document.body.style.backgroundAttachment = (isCoarse || window.innerWidth <= 800) ? 'scroll' : 'fixed'
   } catch {}
 
   // Block page scroll fully
