@@ -1,4 +1,4 @@
-:root{--bg:#05060a;--bg2:#0a0e14;--grid:#0f1420;--text:#c9f5ff;--muted:#6ad1e3;--accent:#00e0ff;--accent2:#ff00d4;--good:#00ffc6;--bad:#ff6176;--shadow:0 0 24px rgba(0,224,255,.35),0 0 64px rgba(255,0,212,.22)}*{box-sizing:border-box}html,body{height:100%}body{margin:0;min-height:100vh;background:#000 url("bg6.png") center/cover no-repeat fixed;color:var(--text);font:16px/1.4 Inter,system-ui,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+:root{--bg:#05060a;--bg2:#0a0e14;--grid:#0f1420;--text:#c9f5ff;--muted:#6ad1e3;--accent:#00e0ff;--accent2:#ff00d4;--good:#00ffc6;--bad:#ff6176;--shadow:0 0 24px rgba(0,224,255,.35),0 0 64px rgba(255,0,212,.22)}*{box-sizing:border-box}html,body{height:100%}body{margin:0;min-height:100vh;background:#000 url("bg6.png") center/cover no-repeat fixed;color:var(--text);font:16px/1.4 Inter,system-ui,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;-moz-user-select:none;user-select:none}
 .hidden{display:none}
 .hud{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;padding:12px 16px;background:linear-gradient(180deg,rgba(0,0,0,.6),rgba(0,0,0,.2));backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,.08)}
 .brand{display:flex;align-items:center;gap:12px}
@@ -15,7 +15,7 @@
 .btn:disabled{opacity:.7;background-image:url("1.%20Free%20Hologram%20Interface%20Wenrexa/Button%201/Button%20Disable.png") }
 .select{appearance:none;background:rgba(10,14,20,.7);border:1px solid rgba(255,255,255,.12);color:var(--text);padding:8px 12px;border-radius:10px}
 .game-container{position:relative;max-width:min(92vw,560px);margin:18px auto;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 10px 40px rgba(0,0,0,.45)}
-#game-canvas{display:block;width:100%;height:auto;background:linear-gradient(180deg,rgba(10,14,20,.85),rgba(5,6,10,.95));image-rendering:crisp-edges;image-rendering:pixelated}
+#game-canvas{display:block;width:100%;height:auto;background:transparent;image-rendering:crisp-edges;image-rendering:pixelated;touch-action:none}
 .overlay{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,0,0,.65),rgba(0,0,0,.85));display:flex;align-items:center;justify-content:center}
 .overlay-content{background:rgba(10,14,20,.75);border:1px solid rgba(255,255,255,.12);padding:20px;border-radius:16px;box-shadow:var(--shadow);text-align:center;max-width:90%}
 .overlay-title{font-size:24px;color:var(--accent2);text-shadow:var(--shadow);margin-bottom:6px}

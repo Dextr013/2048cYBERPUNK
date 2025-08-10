@@ -8,7 +8,7 @@ import { AdConfig } from './config.js'
 import { Achievements } from './modules/achievements.js'
 
 const canvas = document.getElementById('game-canvas')
-const ctx = canvas.getContext('2d', { alpha: false })
+const ctx = canvas.getContext('2d', { alpha: true })
 
 const state = {
   started: false,
