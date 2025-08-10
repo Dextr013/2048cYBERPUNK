@@ -29,6 +29,7 @@ export async function loadI18n(locales) {
 
 export function setLanguage(locale) {
   current = locale
+  try { document.documentElement.setAttribute('lang', locale) } catch {}
 }
 
 export function t(key, params) {

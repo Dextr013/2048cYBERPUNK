@@ -13,8 +13,17 @@ const tileSrcByValue = new Map([
 ])
 
 function loadImage(src) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (window.createImageBitmap) {
+        const res = await fetch(src)
+        const blob = await res.blob()
+        const bmp = await createImageBitmap(blob)
+        return resolve(bmp)
+      }
+    } catch {}
     const img = new Image()
+    try { img.decoding = 'async' } catch {}
     img.src = src
     img.onload = () => resolve(img)
     img.onerror = reject
@@ -27,6 +36,9 @@ export class Renderer {
     this.ctx = canvas.getContext('2d')
     this.dpr = 1
     this.cache = new Map()
+    this.bump = new Map() // key: "r,c" => scale
+    this.spawnPulse = new Map()
+    this.slide = [] // {x,y,w,h,img/text,value,progress}
   }
   setDpr(dpr) { this.dpr = dpr }
 
@@ -50,7 +62,7 @@ export class Renderer {
     const startX = (canvas.width - size) / 2
     const startY = (canvas.height - size) / 2
 
-    // Grid background glow
+    // Grid background glow (confined to board area)
     const bgGrad = ctx.createRadialGradient(
       canvas.width / 2,
       canvas.height / 2,
@@ -62,7 +74,8 @@ export class Renderer {
     bgGrad.addColorStop(0, 'rgba(0,224,255,0.08)')
     bgGrad.addColorStop(1, 'rgba(255,0,212,0.06)')
     ctx.fillStyle = bgGrad
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    const glowPad = pad * 0.6
+    ctx.fillRect(startX - glowPad, startY - glowPad, size + glowPad * 2, size + glowPad * 2)
 
     // Cells
     for (let r = 0; r < n; r++) {
@@ -84,28 +97,87 @@ export class Renderer {
 
   async drawTiles(grid, layout) {
     const { ctx } = this
-    for (let r = 0; r < layout.n; r++) {
-      for (let c = 0; c < layout.n; c++) {
-        const value = grid[r][c]
-        if (!value) continue
+    // draw sliding overlays first
+    const movingTargets = new Set()
+    if (this.slide?.length) {
+      for (const s of this.slide) {
+        movingTargets.add(`${s.tr},${s.tc}`)
+        const cx = layout.startX + s.c * (layout.cellSize + layout.cellGap)
+        const cy = layout.startY + s.r * (layout.cellSize + layout.cellGap)
+        const tx = layout.startX + s.tc * (layout.cellSize + layout.cellGap)
+        const ty = layout.startY + s.tr * (layout.cellSize + layout.cellGap)
+        const x = cx + (tx - cx) * s.p
+        const y = cy + (ty - cy) * s.p
+        ctx.save()
+        ctx.shadowColor = 'rgba(0,224,255,0.5)'
+        ctx.shadowBlur = 12 * this.dpr
         let img = null
-        try {
-          img = await this.getTileImage(value)
-        } catch (e) {
-          img = null
-        }
-        const x = layout.startX + c * (layout.cellSize + layout.cellGap)
-        const y = layout.startY + r * (layout.cellSize + layout.cellGap)
-        if (img) {
-          drawContainedImage(ctx, img, x, y, layout.cellSize, layout.cellSize)
-        } else {
-          // Fallback: neon text
+        try { img = await this.getTileImage(s.value) } catch {}
+        if (img) drawContainedImage(ctx, img, x, y, layout.cellSize, layout.cellSize)
+        else {
           ctx.fillStyle = 'white'
           ctx.font = `${Math.floor(layout.cellSize * 0.38)}px sans-serif`
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
-          ctx.fillText(String(value), x + layout.cellSize / 2, y + layout.cellSize / 2)
+          ctx.fillText(String(s.value), x + layout.cellSize / 2, y + layout.cellSize / 2)
         }
+        ctx.restore()
+      }
+    }
+
+    for (let r = 0; r < layout.n; r++) {
+      for (let c = 0; c < layout.n; c++) {
+        const value = grid[r][c]
+        if (value === 0) continue
+        // if a tile is currently sliding into this cell, skip drawing base to avoid double
+        if (movingTargets.has(`${r},${c}`)) continue
+        const x = layout.startX + c * (layout.cellSize + layout.cellGap)
+        const y = layout.startY + r * (layout.cellSize + layout.cellGap)
+
+        // Neon outer glow
+        ctx.save()
+        ctx.shadowColor = value === -1 ? 'rgba(255,0,212,0.6)' : 'rgba(0,224,255,0.6)'
+        ctx.shadowBlur = 16 * this.dpr
+
+        // Scale for bump/spawn
+        const key = `${r},${c}`
+        const s = this.bump.get(key) ?? this.spawnPulse.get(key) ?? 1
+        ctx.translate(x + layout.cellSize / 2, y + layout.cellSize / 2)
+        ctx.scale(s, s)
+        ctx.translate(-(x + layout.cellSize / 2), -(y + layout.cellSize / 2))
+
+        if (value === -1) {
+          // Blocker tile
+          ctx.fillStyle = 'rgba(20,6,18,0.9)'
+          ctx.strokeStyle = 'rgba(255,0,212,0.75)'
+          ctx.lineWidth = 3 * this.dpr
+          roundRect(ctx, x, y, layout.cellSize, layout.cellSize, 8 * this.dpr)
+          ctx.fill()
+          ctx.stroke()
+          // X mark
+          ctx.strokeStyle = 'rgba(255,0,212,0.9)'
+          ctx.lineWidth = 4 * this.dpr
+          ctx.beginPath()
+          ctx.moveTo(x + layout.cellSize * 0.25, y + layout.cellSize * 0.25)
+          ctx.lineTo(x + layout.cellSize * 0.75, y + layout.cellSize * 0.75)
+          ctx.moveTo(x + layout.cellSize * 0.75, y + layout.cellSize * 0.25)
+          ctx.lineTo(x + layout.cellSize * 0.25, y + layout.cellSize * 0.75)
+          ctx.stroke()
+        } else {
+          let img = null
+          try { img = await this.getTileImage(value) } catch (e) { img = null }
+          if (img) {
+            drawContainedImage(ctx, img, x, y, layout.cellSize, layout.cellSize)
+          } else {
+            // Fallback: neon text
+            ctx.fillStyle = 'white'
+            ctx.font = `${Math.floor(layout.cellSize * 0.38)}px sans-serif`
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillText(String(value), x + layout.cellSize / 2, y + layout.cellSize / 2)
+          }
+        }
+        ctx.restore()
       }
     }
   }
@@ -116,6 +188,59 @@ export class Renderer {
     const layout = this.drawGrid(game.grid)
     // Draw synchronously; images may still be loading
     this.drawTiles(game.grid, layout)
+  }
+
+  bumpTiles(positions) {
+    if (!Array.isArray(positions)) return
+    for (const [r, c] of positions) {
+      const key = `${r},${c}`
+      this.bump.set(key, 1.0)
+      if (window.gsap) {
+        window.gsap.killTweensOf({})
+        window.gsap.to(this, { duration: 0.12, ease: 'power2.out', onUpdate: () => {
+          this.bump.set(key, 1.15)
+        }})
+        window.gsap.to(this, { duration: 0.18, delay: 0.12, ease: 'back.out(2)', onUpdate: () => {
+          this.bump.set(key, 1.0)
+        }, onComplete: () => { this.bump.delete(key) }})
+      } else {
+        // Fallback without GSAP
+        this.bump.set(key, 1.15)
+        setTimeout(() => { this.bump.set(key, 1.0); setTimeout(() => this.bump.delete(key), 120) }, 120)
+      }
+    }
+  }
+
+  pulseSpawn(r, c) {
+    const key = `${r},${c}`
+    this.spawnPulse.set(key, 0.8)
+    if (window.gsap) {
+      window.gsap.to(this, { duration: 0.25, ease: 'back.out(3)', onUpdate: () => {
+        const cur = this.spawnPulse.get(key) || 1
+        this.spawnPulse.set(key, Math.min(1.0, cur + 0.05))
+      }, onComplete: () => { this.spawnPulse.delete(key) }})
+    } else {
+      setTimeout(() => this.spawnPulse.set(key, 1), 180)
+      setTimeout(() => this.spawnPulse.delete(key), 260)
+    }
+  }
+
+  animateSlides(moves) {
+    if (!moves || !moves.length) return
+    // build slide descriptors
+    this.slide = moves.map((m) => ({ r: m.fromR, c: m.fromC, tr: m.toR, tc: m.toC, value: m.value, p: 0 }))
+    if (window.gsap) {
+      window.gsap.to(this.slide, { duration: 0.18, p: 1, ease: 'power2.out', onComplete: () => { this.slide = [] } })
+    } else {
+      const start = performance.now()
+      const dur = 180
+      const tick = (ts) => {
+        const t = Math.min(1, (ts - start) / dur)
+        for (const s of this.slide) s.p = t
+        if (t < 1) requestAnimationFrame(tick); else this.slide = []
+      }
+      requestAnimationFrame(tick)
+    }
   }
 }
 

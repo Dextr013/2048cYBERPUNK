@@ -4,6 +4,8 @@ function createEmptyGrid(size) {
 
 function randomChoice(list) { return list[Math.floor(Math.random() * list.length)] }
 
+function isBlocker(v) { return v === -1 }
+
 export class Game {
   constructor(size = 4) {
     this.size = size
@@ -17,7 +19,8 @@ export class Game {
     this.score = 0
     this.won = false
     this.spawn()
-    this.spawn()
+    const s2 = this.spawn()
+    return s2
   }
 
   getEmptyCells() {
@@ -31,13 +34,29 @@ export class Game {
     if (empties.length === 0) return false
     const [r, c] = randomChoice(empties)
     this.grid[r][c] = Math.random() < 0.9 ? 2 : 4
-    return true
+    return [r, c]
+  }
+
+  addRandomBlocker() {
+    // pick a random non-empty, non-blocker tile and turn into blocker
+    const candidates = []
+    for (let r = 0; r < this.size; r++) for (let c = 0; c < this.size; c++) {
+      const v = this.grid[r][c]
+      if (v !== 0 && !isBlocker(v)) candidates.push([r, c])
+    }
+    if (candidates.length === 0) return false
+    const [r, c] = randomChoice(candidates)
+    this.grid[r][c] = -1
+    return [r, c]
   }
 
   move(dir) {
     let moved = false
     let wonNow = false
     const size = this.size
+    const mergesPositions = []
+    let mergesCount = 0
+    const moves = [] // { fromR, fromC, toR, toC, value }
 
     const get = (r, c) => this.grid[r][c]
     const set = (r, c, v) => (this.grid[r][c] = v)
@@ -58,8 +77,10 @@ export class Game {
     for (const r of order.rows) {
       for (const c of order.cols) {
         const value = get(r, c)
-        if (!value) continue
+        if (!value || isBlocker(value)) continue
         let nr = r, nc = c
+        const startR = r, startC = c
+        let mergedAt = null
         const step = (d) => {
           if (d === 'up') nr -= 1
           if (d === 'down') nr += 1
@@ -71,38 +92,47 @@ export class Game {
           step(dir)
           if (nr < 0 || nr >= size || nc < 0 || nc >= size) break
           const target = get(nr, nc)
+          if (isBlocker(target)) break
           if (target === 0) { tr = nr; tc = nc; nr = tr; nc = tc; continue }
           if (target === value && !mergedThisMove[nr][nc]) {
             // merge
-            set(r, c, 0)
+            set(startR, startC, 0)
             set(nr, nc, value * 2)
             mergedThisMove[nr][nc] = true
             this.score += value * 2
+            mergesCount += 1
+            mergesPositions.push([nr, nc])
+            mergedAt = [nr, nc]
             if (value * 2 === 2048) wonNow = true
             moved = true
           }
           break
         }
         // Move to last free spot if not merged
-        if (get(r, c) !== 0) {
-          const sr = nr, sc = nc
+        if (get(startR, startC) !== 0) {
           // step back one to last valid
           if (dir === 'up') nr += 1
           if (dir === 'down') nr -= 1
           if (dir === 'left') nc += 1
           if (dir === 'right') nc -= 1
-          if (nr !== r || nc !== c) {
+          // do not move into blocker
+          if (!(nr === startR && nc === startC) && !isBlocker(get(nr, nc))) {
             set(nr, nc, value)
-            set(r, c, 0)
+            set(startR, startC, 0)
+            moves.push({ fromR: startR, fromC: startC, toR: nr, toC: nc, value })
             moved = true
           }
+        } else if (mergedAt) {
+          // was merged directly
+          moves.push({ fromR: startR, fromC: startC, toR: mergedAt[0], toC: mergedAt[1], value })
         }
       }
     }
 
-    if (moved) this.spawn()
+    let spawnedAt = null
+    if (moved) spawnedAt = this.spawn()
     this.won = this.won || wonNow
-    return { moved, won: wonNow }
+    return { moved, won: wonNow, mergesCount, mergesPositions, spawnedAt, moves }
   }
 
   isGameOver() {
@@ -111,6 +141,7 @@ export class Game {
     for (let r = 0; r < this.size; r++) {
       for (let c = 0; c < this.size; c++) {
         const v = this.grid[r][c]
+        if (isBlocker(v)) continue
         if (r + 1 < this.size && this.grid[r + 1][c] === v) return false
         if (c + 1 < this.size && this.grid[r][c + 1] === v) return false
       }

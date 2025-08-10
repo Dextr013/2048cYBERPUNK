@@ -2,26 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="color-scheme" content="dark light" />
-    <title>2048 Cybergrid</title>
-    <link rel="preload" as="image" href="bg6.png" />
-    <link rel="preload" as="image" href="digit 2.png" />
-    <link rel="preload" as="image" href="digit 4.png" />
-    <link rel="preload" as="image" href="digit 8.png" />
-    <link rel="preload" as="image" href="digit 16.png" />
-    <link rel="preload" as="image" href="digit 32.png" />
-    <link rel="preload" as="image" href="digit 64.png" />
-    <link rel="preload" as="image" href="digit 128.png" />
-    <link rel="preload" as="image" href="digit 256.png" />
-    <link rel="preload" as="image" href="digit 512.png" />
-    <link rel="preload" as="image" href="digit 1024.png" />
-    <link rel="preload" as="image" href="digit 2048.png" />
+    <meta name="theme-color" content="#000000" />
+    <title>Киберпанк 2048</title>
+    
     <link rel="preload" as="style" href="styles.css" id="styles-preload">
+    <link rel="modulepreload" href="src/main.js">
     <!-- Speed up potential Yandex SDK/connects -->
     <link rel="preconnect" href="https://yandex.ru" crossorigin>
     <link rel="preconnect" href="https://yandex.ru/games" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <!-- Preload fallback background only to reduce bandwidth; others load on demand -->
+    <link rel="preload" as="image" href="bg6.png">
     <!-- Minimal critical CSS for early paint (preloader + base) -->
     <style>
       html,body{height:100%}
@@ -34,6 +28,7 @@
       html,body{visibility:visible!important;opacity:1!important}
     </style>
     <script src="src/boot.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
   </head>
   <body style="visibility:visible!important;opacity:1!important;display:block!important">
     <noscript>
@@ -48,14 +43,22 @@
           <div id="app" class="hidden">
       <div class="hud">
         <div class="brand">
-          <span class="title" data-i18n="title">2048 Cybergrid</span>
+          <span class="title" data-i18n="title">Киберпанк 2048</span>
           <button id="btn-new" class="btn" data-i18n="newGame">New Game</button>
         </div>
         <div class="stats">
           <div class="stat"><span data-i18n="score">Score</span><strong id="score">0</strong></div>
           <div class="stat"><span data-i18n="best">Best</span><strong id="best">0</strong></div>
+          <div class="stat" id="timer-wrap" style="display:none"><span data-i18n="timeLeft">Time</span><strong id="time-left">2:00</strong></div>
         </div>
         <div class="controls">
+          <label class="mode-wrap"><span data-i18n="mode">Mode</span>
+            <select id="mode-select" class="select">
+              <option value="classic" data-i18n="modeClassic">Classic</option>
+              <option value="timed" data-i18n="modeTimed">Timed</option>
+              <option value="hard" data-i18n="modeHard">Hard</option>
+            </select>
+          </label>
           <button id="btn-sound" class="btn toggle" aria-pressed="false" data-i18n="soundOn">Sound</button>
           <select id="lang-select" class="select"></select>
           <button id="btn-settings" class="btn" data-i18n="settings">Settings</button>
@@ -64,11 +67,11 @@
         </div>
       </div>
 
-      <div class="game-container">
+      <div class="game-container" style="-webkit-user-select:none;-moz-user-select:none;user-select:none;touch-action:none">
         <canvas id="game-canvas" width="480" height="640" aria-label="game"></canvas>
         <div id="overlay" class="overlay hidden">
           <div class="overlay-content">
-            <div id="overlay-title" class="overlay-title">2048</div>
+            <div id="overlay-title" class="overlay-title">Киберпанк 2048</div>
             <div id="overlay-sub" class="overlay-sub">—</div>
             <div class="overlay-actions">
               <button id="btn-continue" class="btn primary" data-i18n="continue">Continue</button>
