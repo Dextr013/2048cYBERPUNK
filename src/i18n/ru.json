@@ -35,11 +35,11 @@
   "mode": "Режим",
   "modeClassic": "Классический",
   "modeTimed": "На время",
-  "modeHard": "Хард",
+
   "timeLeft": "Время",
   "timeUp": "Время вышло!",
   "combo": "Комбо",
   "fast512": "512 за 30 сек!",
   "endurance5": "Выносливость 5 минут!",
-  "blockerSpawned": "Блокер появился!"
+
 }

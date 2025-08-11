@@ -38,9 +38,11 @@
     <div id="preloader" class="preloader">
       <div class="spinner"></div>
       <div id="preloader-text">Loading…</div>
-    </div>
+        </div>
 
-          <div id="app" class="hidden">
+    <div id="bg-layer" aria-hidden="true"></div>
+
+    <div id="app" class="hidden">
       <div class="hud">
         <div class="brand">
           <span class="title" data-i18n="title">Киберпанк 2048</span>
@@ -55,9 +57,8 @@
           <label class="mode-wrap"><span data-i18n="mode">Mode</span>
             <select id="mode-select" class="select">
               <option value="classic" data-i18n="modeClassic">Classic</option>
-              <option value="timed" data-i18n="modeTimed">Timed</option>
-              <option value="hard" data-i18n="modeHard">Hard</option>
-            </select>
+                             <option value="timed" data-i18n="modeTimed">Timed</option>
+             </select>
           </label>
           <button id="btn-sound" class="btn toggle" aria-pressed="false" data-i18n="soundOn">Sound</button>
           <select id="lang-select" class="select"></select>

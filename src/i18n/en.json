@@ -35,11 +35,11 @@
   "mode": "Mode",
   "modeClassic": "Classic",
   "modeTimed": "Timed",
-  "modeHard": "Hard",
+
   "timeLeft": "Time",
   "timeUp": "Time is up!",
   "combo": "Combo",
   "fast512": "512 in 30s!",
   "endurance5": "Endurance 5 minutes!",
-  "blockerSpawned": "Blocker spawned!"
+
 }

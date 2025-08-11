@@ -162,12 +162,12 @@ async function boot() {
 
   const modeSel = document.getElementById('mode-select')
   if (modeSel) {
+    if (state.mode === 'hard') state.mode = 'classic'
     modeSel.value = state.mode
     modeSel.addEventListener('change', (e) => {
       state.mode = e.target.value
       try { localStorage.setItem('mode', state.mode) } catch {}
       applyModeUi()
-      // restart run to apply rules cleanly
       startNewRun(game, renderer)
     })
   }
@@ -209,6 +209,7 @@ async function boot() {
     volumeRange.addEventListener('input', (e) => {
       const v = Number(e.target.value)
       audio.setVolume(v / 100)
+      try { localStorage.setItem('volume', String(v)) } catch {}
     })
   }
   if (trackSelect) {
@@ -298,20 +299,22 @@ async function boot() {
   document.getElementById('app')?.classList.remove('hidden')
   if (window.__boot_timeout) { clearTimeout(window.__boot_timeout); window.__boot_timeout = null }
 
-  // Set background (supports ?bg=URL). Defaults to provided sample look.
+  // Set background on separate layer (#bg-layer) - supports ?bg=URL
   try {
-    const q = new URLSearchParams(location.search)
-    const customBg = q.get('bg')
-    const defaultBg = 'https://avatars.mds.yandex.net/get-games/1892995/2a00000198578acfc08bd4a514259834ed86//orig'
-    const fallbackList = ['background17.webp','background18.webp','background19.webp','bg6.png']
-    const chosen = customBg ? decodeURIComponent(customBg) : defaultBg
-    const isCoarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches
-    document.body.style.backgroundColor = '#000'
-    document.body.style.backgroundImage = `url("${chosen}"), url("${fallbackList[Math.floor(Math.random()*fallbackList.length)]}")`
-    document.body.style.backgroundRepeat = 'no-repeat, no-repeat'
-    document.body.style.backgroundPosition = 'center, center'
-    document.body.style.backgroundSize = 'cover, cover'
-    document.body.style.backgroundAttachment = (isCoarse || window.innerWidth <= 800) ? 'scroll' : 'fixed'
+    const bgLayer = document.getElementById('bg-layer')
+    if (bgLayer) {
+      const q = new URLSearchParams(location.search)
+      const customBg = q.get('bg')
+      const defaultBg = 'https://avatars.mds.yandex.net/get-games/1892995/2a00000198578acfc08bd4a514259834ed86//orig'
+      const fallbackList = ['background17.webp','background18.webp','background19.webp','bg6.png']
+      const chosen = customBg ? decodeURIComponent(customBg) : defaultBg
+      const isCoarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches
+      bgLayer.style.backgroundImage = `url("${chosen}"), url("${fallbackList[Math.floor(Math.random()*fallbackList.length)]}")`
+      bgLayer.style.backgroundRepeat = 'no-repeat, no-repeat'
+      bgLayer.style.backgroundPosition = 'center, center'
+      bgLayer.style.backgroundSize = 'cover, cover'
+      bgLayer.style.backgroundAttachment = (isCoarse || window.innerWidth <= 800) ? 'scroll' : 'fixed'
+    }
   } catch {}
 
   // Defer platform init after first paint
@@ -382,16 +385,7 @@ function startNewRun(game, renderer) {
   } else {
     state.timerMs = 0
   }
-  if (state.mode === 'hard') {
-    state.hardInterval = setInterval(() => {
-      const added = game.addRandomBlocker()
-      if (added) {
-        // small visual cue
-        renderer.bumpTiles([added])
-        showToast(t('blockerSpawned'))
-      }
-    }, 30000)
-  }
+
   // pulse last spawned tile from reset
   if (lastSpawn) renderer.pulseSpawn(lastSpawn[0], lastSpawn[1])
 }

@@ -4,7 +4,7 @@ function createEmptyGrid(size) {
 
 function randomChoice(list, rnd = Math.random) { return list[Math.floor(rnd() * list.length)] }
 
-function isBlocker(v) { return v === -1 }
+function isBlocker(v) { return false }
 
 export class Game {
   constructor(size = 4, seed = null) {
@@ -40,18 +40,8 @@ export class Game {
     return [r, c]
   }
 
-  addRandomBlocker() {
-    // pick a random non-empty, non-blocker tile and turn into blocker
-    const candidates = []
-    for (let r = 0; r < this.size; r++) for (let c = 0; c < this.size; c++) {
-      const v = this.grid[r][c]
-      if (v !== 0 && !isBlocker(v)) candidates.push([r, c])
-    }
-    if (candidates.length === 0) return false
-    const [r, c] = randomChoice(candidates, this._prng)
-    this.grid[r][c] = -1
-    return [r, c]
-  }
+  // Hard mode removed
+  addRandomBlocker() { return false }
 
   move(dir) {
     let moved = false
