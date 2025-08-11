@@ -226,21 +226,22 @@ export class Renderer {
   }
 
   animateSlides(moves) {
-    if (!moves || !moves.length) return
-    // build slide descriptors
+    if (!moves || !moves.length) return Promise.resolve()
     this.slide = moves.map((m) => ({ r: m.fromR, c: m.fromC, tr: m.toR, tc: m.toC, value: m.value, p: 0 }))
-    if (window.gsap) {
-      window.gsap.to(this.slide, { duration: 0.18, p: 1, ease: 'power2.out', onComplete: () => { this.slide = [] } })
-    } else {
-      const start = performance.now()
-      const dur = 180
-      const tick = (ts) => {
-        const t = Math.min(1, (ts - start) / dur)
-        for (const s of this.slide) s.p = t
-        if (t < 1) requestAnimationFrame(tick); else this.slide = []
+    return new Promise((resolve) => {
+      if (window.gsap) {
+        window.gsap.to(this.slide, { duration: 0.18, p: 1, ease: 'power2.out', onComplete: () => { this.slide = []; resolve() } })
+      } else {
+        const start = performance.now()
+        const dur = 180
+        const tick = (ts) => {
+          const t = Math.min(1, (ts - start) / dur)
+          for (const s of this.slide) s.p = t
+          if (t < 1) requestAnimationFrame(tick); else { this.slide = []; resolve() }
+        }
+        requestAnimationFrame(tick)
       }
-      requestAnimationFrame(tick)
-    }
+    })
   }
 }
 

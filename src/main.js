@@ -233,11 +233,14 @@ async function boot() {
   }
 
   // Input -> Game actions
-  input.onMove = (dir) => {
+  let inputLocked = false
+  input.onMove = async (dir) => {
+    if (inputLocked) return
     if (state.mode === 'timed' && state.timerMs <= 0) return
     const result = game.move(dir)
     if (result.moved) {
-      if (result.moves?.length) renderer.animateSlides(result.moves)
+      inputLocked = true
+      if (result.moves?.length) await renderer.animateSlides(result.moves)
       // Visuals: bounce merged, pulse spawn
       if (result.mergesPositions?.length) renderer.bumpTiles(result.mergesPositions)
       if (result.spawnedAt) renderer.pulseSpawn(result.spawnedAt[0], result.spawnedAt[1])
@@ -258,6 +261,7 @@ async function boot() {
       achievements.check(game)
       if (result.won) { showOverlay(t('youWin'), t('mergeTo', { value: 2048 })); Platform.submitScore(game.score) }
       else if (game.isGameOver()) { showOverlay(t('gameOver'), t('noMoves')); Platform.submitScore(game.score); if (AdConfig.interstitialOnGameOver) tryShowInterstitial() }
+      inputLocked = false
     }
   }
 

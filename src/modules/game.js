@@ -2,16 +2,18 @@ function createEmptyGrid(size) {
   return Array.from({ length: size }, () => Array.from({ length: size }, () => 0))
 }
 
-function randomChoice(list) { return list[Math.floor(Math.random() * list.length)] }
+function randomChoice(list, rnd = Math.random) { return list[Math.floor(rnd() * list.length)] }
 
 function isBlocker(v) { return v === -1 }
 
 export class Game {
-  constructor(size = 4) {
+  constructor(size = 4, seed = null) {
     this.size = size
     this.grid = createEmptyGrid(size)
     this.score = 0
     this.won = false
+    this._seed = seed
+    this._prng = seed != null ? createPrng(seed) : Math.random
   }
 
   reset() {
@@ -32,8 +34,9 @@ export class Game {
   spawn() {
     const empties = this.getEmptyCells()
     if (empties.length === 0) return false
-    const [r, c] = randomChoice(empties)
-    this.grid[r][c] = Math.random() < 0.9 ? 2 : 4
+    const [r, c] = randomChoice(empties, this._prng)
+    const v = this._prng() < 0.9 ? 2 : 4
+    this.grid[r][c] = v
     return [r, c]
   }
 
@@ -45,7 +48,7 @@ export class Game {
       if (v !== 0 && !isBlocker(v)) candidates.push([r, c])
     }
     if (candidates.length === 0) return false
-    const [r, c] = randomChoice(candidates)
+    const [r, c] = randomChoice(candidates, this._prng)
     this.grid[r][c] = -1
     return [r, c]
   }
@@ -166,5 +169,23 @@ export class Game {
     this.score = Number(state.score || 0)
     this.won = Boolean(state.won)
     return true
+  }
+
+  setSeed(seed) {
+    this._seed = seed
+    this._prng = seed != null ? createPrng(seed) : Math.random
+  }
+}
+
+function createPrng(seed) {
+  let s = Number(seed) >>> 0
+  if (!Number.isFinite(s)) s = 123456789
+  if (s === 0) s = 123456789
+  return function rnd() {
+    // xorshift32
+    s ^= s << 13; s >>>= 0
+    s ^= s >> 17; s >>>= 0
+    s ^= s << 5;  s >>>= 0
+    return (s >>> 0) / 4294967296
   }
 }

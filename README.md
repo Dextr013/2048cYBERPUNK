@@ -45,3 +45,12 @@ Controls:
 
 Build:
 - No build step required. Plain HTML5/ESM. Ensure your host serves correct MIME types.
+
+## Tests
+
+- Open `tests/index.html` in a browser via HTTP (not file://). It runs unit tests for core logic (move/merge/spawn/isGameOver).
+- Or serve repo root and open `http://localhost:8080/tests/`.
+
+## Dev server
+
+- `npx http-server -p 8080 -c-1` then visit `http://localhost:8080/`.
