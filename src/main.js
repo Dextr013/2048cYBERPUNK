@@ -88,7 +88,7 @@ async function boot() {
     }
   } catch {}
 
-  const audio = new AudioManager([
+    const audio = new AudioManager([
     { id: 'bgm1', src: 'Nightwalk.ogg', type: 'music' },
     { id: 'bgm2', src: 'minimum.ogg', type: 'music' },
     { id: 'bgm3', src: 'malfunction.ogg', type: 'music' },
@@ -272,23 +272,21 @@ async function boot() {
   function resize() {
     const dpr = Math.min(2, window.devicePixelRatio || 1)
     const vw = Math.max(320, Math.min(window.innerWidth, 1920))
-    const vh = Math.max(420, Math.min(window.innerHeight, 1080))
+    const vh = Math.max(320, Math.min(window.innerHeight, 1920))
 
-    // Prefer container bounds if available
+    // Prefer container bounds; container keeps square via CSS aspect-ratio
     let cw = vw, ch = vh
     if (container) {
       const cb = container.getBoundingClientRect()
-      // If container has 0 height (e.g., hidden), use viewport instead
       if (cb.height > 0) { cw = cb.width; ch = cb.height }
     }
-    // Keep aspect around portrait 3:4 while filling space
-    const targetW = cw
-    const targetH = Math.min(ch, cw * (4 / 3))
 
-    canvas.style.width = `${targetW}px`
-    canvas.style.height = `${targetH}px`
-    canvas.width = Math.floor(targetW * dpr)
-    canvas.height = Math.floor(targetH * dpr)
+    const side = Math.floor(Math.min(cw, ch))
+
+    canvas.style.width = `${side}px`
+    canvas.style.height = `${side}px`
+    canvas.width = Math.floor(side * dpr)
+    canvas.height = Math.floor(side * dpr)
     renderer.setDpr(dpr)
   }
   window.addEventListener('resize', resize)
