@@ -298,16 +298,19 @@ async function boot() {
   document.getElementById('app')?.classList.remove('hidden')
   if (window.__boot_timeout) { clearTimeout(window.__boot_timeout); window.__boot_timeout = null }
 
-  // Set random cyber background reliably on all devices
+  // Set background (supports ?bg=URL). Defaults to provided sample look.
   try {
-    const bgs = ['background17.webp','background18.webp','background19.webp','bg6.png']
-    const pick = bgs[Math.floor(Math.random() * bgs.length)]
+    const q = new URLSearchParams(location.search)
+    const customBg = q.get('bg')
+    const defaultBg = 'https://avatars.mds.yandex.net/get-games/1892995/2a00000198578acfc08bd4a514259834ed86//orig'
+    const fallbackList = ['background17.webp','background18.webp','background19.webp','bg6.png']
+    const chosen = customBg ? decodeURIComponent(customBg) : defaultBg
     const isCoarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches
     document.body.style.backgroundColor = '#000'
-    document.body.style.backgroundImage = `url("${pick}")`
-    document.body.style.backgroundRepeat = 'no-repeat'
-    document.body.style.backgroundPosition = 'center'
-    document.body.style.backgroundSize = 'cover'
+    document.body.style.backgroundImage = `url("${chosen}"), url("${fallbackList[Math.floor(Math.random()*fallbackList.length)]}")`
+    document.body.style.backgroundRepeat = 'no-repeat, no-repeat'
+    document.body.style.backgroundPosition = 'center, center'
+    document.body.style.backgroundSize = 'cover, cover'
     document.body.style.backgroundAttachment = (isCoarse || window.innerWidth <= 800) ? 'scroll' : 'fixed'
   } catch {}
 
