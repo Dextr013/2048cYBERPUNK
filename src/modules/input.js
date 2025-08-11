@@ -2,6 +2,9 @@ export class Input {
   constructor(target) {
     this.onMove = null
     this.onRestart = null
+    this.onUndo = null
+    this.onRedo = null
+    this.onHint = null
 
     window.addEventListener('keydown', (e) => {
       let dir = null
@@ -11,6 +14,9 @@ export class Input {
         case 'ArrowLeft': case 'a': case 'A': dir = 'left'; break
         case 'ArrowRight': case 'd': case 'D': dir = 'right'; break
         case 'r': case 'R': this.onRestart && this.onRestart(); break
+        case 'z': case 'Z': this.onUndo && this.onUndo(); break
+        case 'y': case 'Y': this.onRedo && this.onRedo(); break
+        case 'h': case 'H': this.onHint && this.onHint(); break
       }
       if (dir) { e.preventDefault(); this.onMove && this.onMove(dir) }
     }, { passive: false })

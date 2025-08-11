@@ -25,6 +25,14 @@ export class Game {
     return s2
   }
 
+  resize(newSize) {
+    const n = Number(newSize)
+    if (!Number.isFinite(n) || n < 3 || n > 8) return false
+    this.size = n
+    this.reset()
+    return true
+  }
+
   getEmptyCells() {
     const cells = []
     for (let r = 0; r < this.size; r++) for (let c = 0; c < this.size; c++) if (this.grid[r][c] === 0) cells.push([r, c])

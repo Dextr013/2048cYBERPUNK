@@ -53,19 +53,29 @@
           <div class="stat"><span data-i18n="best">Best</span><strong id="best">0</strong></div>
           <div class="stat" id="timer-wrap" style="display:none"><span data-i18n="timeLeft">Time</span><strong id="time-left">2:00</strong></div>
         </div>
-        <div class="controls">
-          <label class="mode-wrap"><span data-i18n="mode">Mode</span>
-            <select id="mode-select" class="select">
-              <option value="classic" data-i18n="modeClassic">Classic</option>
-                             <option value="timed" data-i18n="modeTimed">Timed</option>
+                 <div class="controls">
+           <label class="mode-wrap"><span data-i18n="mode">Mode</span>
+             <select id="mode-select" class="select">
+               <option value="classic" data-i18n="modeClassic">Classic</option>
+               <option value="timed" data-i18n="modeTimed">Timed</option>
              </select>
-          </label>
-          <button id="btn-sound" class="btn toggle" aria-pressed="false" data-i18n="soundOn">Sound</button>
-          <select id="lang-select" class="select"></select>
-          <button id="btn-settings" class="btn" data-i18n="settings">Settings</button>
-          <button id="btn-auth" class="btn" data-i18n="signIn">Sign In</button>
-          <button id="btn-lb" class="btn" data-i18n="leaderboard">Leaderboard</button>
-        </div>
+           </label>
+           <label class="mode-wrap"><span>Size</span>
+             <select id="size-select" class="select">
+               <option value="4">4x4</option>
+               <option value="5">5x5</option>
+               <option value="6">6x6</option>
+             </select>
+           </label>
+           <button id="btn-undo" class="btn">Undo</button>
+           <button id="btn-redo" class="btn">Redo</button>
+           <button id="btn-hint" class="btn">Hint</button>
+           <button id="btn-sound" class="btn toggle" aria-pressed="false" data-i18n="soundOn">Sound</button>
+           <select id="lang-select" class="select"></select>
+           <button id="btn-settings" class="btn" data-i18n="settings">Settings</button>
+           <button id="btn-auth" class="btn" data-i18n="signIn">Sign In</button>
+           <button id="btn-lb" class="btn" data-i18n="leaderboard">Leaderboard</button>
+         </div>
       </div>
 
       <div class="game-container" style="-webkit-user-select:none;-moz-user-select:none;user-select:none;touch-action:none">

@@ -39,6 +39,9 @@ export class Renderer {
     this.bump = new Map() // key: "r,c" => scale
     this.spawnPulse = new Map()
     this.slide = [] // {x,y,w,h,img/text,value,progress}
+    this.particles = [] // {x,y,vx,vy,life,color,sz}
+    this._queuedMerge = [] // [[r,c],...]
+    this._queuedSpawn = [] // [[r,c],...]
   }
   setDpr(dpr) { this.dpr = dpr }
 
@@ -182,12 +185,62 @@ export class Renderer {
     }
   }
 
+  queueMergeEffect(cells) { if (Array.isArray(cells) && cells.length) this._queuedMerge.push(...cells) }
+  queueSpawnEffect(r, c) { this._queuedSpawn.push([r, c]) }
+
+  _emitParticlesForCells(cells, layout, color) {
+    for (const [r, c] of cells) {
+      const x = layout.startX + c * (layout.cellSize + layout.cellGap) + layout.cellSize / 2
+      const y = layout.startY + r * (layout.cellSize + layout.cellGap) + layout.cellSize / 2
+      for (let i = 0; i < 10; i++) {
+        const a = Math.random() * Math.PI * 2
+        const sp = (Math.random() * 60 + 40) * this.dpr
+        this.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 300, color, sz: 2 * this.dpr })
+      }
+    }
+  }
+
+  update(dt) {
+    // particles integration
+    const p = this.particles
+    for (let i = p.length - 1; i >= 0; i--) {
+      const it = p[i]
+      it.life -= dt
+      if (it.life <= 0) { p.splice(i, 1); continue }
+      const t = dt / 1000
+      it.x += it.vx * t
+      it.y += it.vy * t
+      // friction
+      it.vx *= 0.98
+      it.vy *= 0.98
+    }
+  }
+
   render(game) {
     const { ctx, canvas } = this
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     const layout = this.drawGrid(game.grid)
-    // Draw synchronously; images may still be loading
+
+    // handle queued effects using current layout
+    if (this._queuedMerge.length) {
+      this._emitParticlesForCells(this._queuedMerge, layout, 'rgba(0,224,255,0.9)')
+      this._queuedMerge = []
+    }
+    if (this._queuedSpawn.length) {
+      this._emitParticlesForCells(this._queuedSpawn, layout, 'rgba(255,0,212,0.9)')
+      this._queuedSpawn = []
+    }
+
+    // Draw tiles
     this.drawTiles(game.grid, layout)
+
+    // Draw particles on top
+    for (const it of this.particles) {
+      ctx.fillStyle = it.color
+      ctx.globalAlpha = Math.max(0, Math.min(1, it.life / 300))
+      ctx.fillRect(it.x - it.sz / 2, it.y - it.sz / 2, it.sz, it.sz)
+    }
+    ctx.globalAlpha = 1
   }
 
   bumpTiles(positions) {

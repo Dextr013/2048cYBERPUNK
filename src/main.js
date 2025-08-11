@@ -111,6 +111,9 @@ async function boot() {
   const game = new Game()
   const renderer = new Renderer(canvas)
   const input = new Input(canvas)
+  input.onUndo = () => doUndo()
+  input.onRedo = () => doRedo()
+  input.onHint = () => doHint()
   const achievements = new Achievements()
   state.achievements = achievements
 
@@ -124,6 +127,14 @@ async function boot() {
     saveState(game)
     tick(performance.now())
   })
+
+  // Undo/Redo/Hint buttons
+  const btnUndo = document.getElementById('btn-undo')
+  const btnRedo = document.getElementById('btn-redo')
+  const btnHint = document.getElementById('btn-hint')
+  if (btnUndo) btnUndo.addEventListener('click', () => doUndo())
+  if (btnRedo) btnRedo.addEventListener('click', () => doRedo())
+  if (btnHint) btnHint.addEventListener('click', () => doHint())
   const btnRestart = document.getElementById('btn-restart')
   if (btnRestart) btnRestart.addEventListener('click', async () => {
     if (AdConfig.interstitialOnRestart) tryShowInterstitial()
@@ -169,6 +180,18 @@ async function boot() {
       try { localStorage.setItem('mode', state.mode) } catch {}
       applyModeUi()
       startNewRun(game, renderer)
+    })
+  }
+
+  const sizeSel = document.getElementById('size-select')
+  if (sizeSel) {
+    sizeSel.value = String(game.size)
+    sizeSel.addEventListener('change', (e) => {
+      const ns = Number(e.target.value)
+      if (game.resize(ns)) {
+        startNewRun(game, renderer)
+        updateHud(game)
+      }
     })
   }
 
@@ -235,22 +258,37 @@ async function boot() {
 
   // Input -> Game actions
   let inputLocked = false
+  const undoStack = []
+  const redoStack = []
+
   input.onMove = async (dir) => {
     if (inputLocked) return
     if (state.mode === 'timed' && state.timerMs <= 0) return
+    const prev = game.getState()
     const result = game.move(dir)
     if (result.moved) {
+      // stacks
+      undoStack.push(prev)
+      redoStack.length = 0
+      state.audio?.playSfx('move')
+
       inputLocked = true
       if (result.moves?.length) await renderer.animateSlides(result.moves)
-      // Visuals: bounce merged, pulse spawn
-      if (result.mergesPositions?.length) renderer.bumpTiles(result.mergesPositions)
-      if (result.spawnedAt) renderer.pulseSpawn(result.spawnedAt[0], result.spawnedAt[1])
+      // Visuals
+      if (result.mergesPositions?.length) {
+        renderer.bumpTiles(result.mergesPositions)
+        renderer.queueMergeEffect(result.mergesPositions)
+        state.audio?.playSfx('merge')
+      }
+      if (result.spawnedAt) {
+        renderer.pulseSpawn(result.spawnedAt[0], result.spawnedAt[1])
+        renderer.queueSpawnEffect(result.spawnedAt[0], result.spawnedAt[1])
+        state.audio?.playSfx('spawn')
+      }
 
-      // Combo toast
       if (result.mergesCount >= 2) {
         showToast(`${t('combo')} ${result.mergesCount}!`)
       }
-      // 512 under 30 sec challenge toast
       if (!state.reached512At && getMaxTile(game) >= 512) {
         const elapsed = Date.now() - state.startedAt
         state.reached512At = Date.now()
@@ -264,6 +302,27 @@ async function boot() {
       else if (game.isGameOver()) { showOverlay(t('gameOver'), t('noMoves')); Platform.submitScore(game.score); if (AdConfig.interstitialOnGameOver) tryShowInterstitial() }
       inputLocked = false
     }
+  }
+
+  function doUndo() {
+    if (!undoStack.length) return
+    const cur = game.getState()
+    const prev = undoStack.pop()
+    redoStack.push(cur)
+    game.setState(prev)
+    updateHud(game)
+  }
+  function doRedo() {
+    if (!redoStack.length) return
+    const cur = game.getState()
+    const next = redoStack.pop()
+    undoStack.push(cur)
+    game.setState(next)
+    updateHud(game)
+  }
+  function doHint() {
+    const hint = suggestMove(game)
+    if (hint) showToast(`Hint: ${hint}`)
   }
 
   input.onRestart = () => document.getElementById('btn-restart')?.click()
@@ -306,12 +365,11 @@ async function boot() {
       const defaultBg = 'https://avatars.mds.yandex.net/get-games/1892995/2a00000198578acfc08bd4a514259834ed86//orig'
       const fallbackList = ['background17.webp','background18.webp','background19.webp','bg6.png']
       const chosen = customBg ? decodeURIComponent(customBg) : defaultBg
-      const isCoarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches
-      bgLayer.style.backgroundImage = `url("${chosen}"), url("${fallbackList[Math.floor(Math.random()*fallbackList.length)]}")`
-      bgLayer.style.backgroundRepeat = 'no-repeat, no-repeat'
-      bgLayer.style.backgroundPosition = 'center, center'
-      bgLayer.style.backgroundSize = 'cover, cover'
-      bgLayer.style.backgroundAttachment = (isCoarse || window.innerWidth <= 800) ? 'scroll' : 'fixed'
+      const img = document.getElementById('bg-img')
+      if (img) {
+        img.src = chosen
+        img.onerror = () => { img.src = fallbackList[Math.floor(Math.random()*fallbackList.length)] }
+      }
     }
   } catch {}
 
@@ -358,6 +416,8 @@ async function boot() {
       showToast(t('endurance5'))
     }
 
+    renderer.update(dt)
+    renderer.update(dt)
     renderer.render(game)
     requestAnimationFrame(tick)
   }
@@ -510,6 +570,22 @@ function showToast(message) {
     el.classList.remove('show')
     setTimeout(() => el.classList.add('hidden'), 400)
   }, 3000)
+}
+
+function suggestMove(g) {
+  const dirs = ['up','down','left','right']
+  let best = null
+  let bestScore = -Infinity
+  for (const d of dirs) {
+    const sim = new Game(g.size, 123)
+    sim.setState(g.getState())
+    const res = sim.move(d)
+    if (!res.moved) continue
+    const empties = sim.getEmptyCells().length
+    const evalScore = empties * 10 + res.mergesCount * 100 + (sim.score - g.score)
+    if (evalScore > bestScore) { bestScore = evalScore; best = d }
+  }
+  return best
 }
 
 boot().catch((err) => {
