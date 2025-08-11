@@ -1,5 +1,5 @@
 :root{--bg:#05060a;--bg2:#0a0e14;--grid:#0f1420;--text:#c9f5ff;--muted:#6ad1e3;--accent:#00e0ff;--accent2:#ff00d4;--good:#00ffc6;--bad:#ff6176;--shadow:0 0 24px rgba(0,224,255,.35),0 0 64px rgba(255,0,212,.22)}*{box-sizing:border-box}html,body{height:100%}body{margin:0;min-height:100vh;background:#000;color:var(--text);font:16px/1.4 Inter,system-ui,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;-moz-user-select:none;user-select:none; overflow:hidden}
-#bg-layer{position:fixed;inset:0;z-index:-1;overflow:hidden;background:#000}
+#bg-layer{position:fixed;inset:0;z-index:0;overflow:hidden;background:#000}
 #bg-layer #bg-img{position:absolute;inset:0;margin:auto;min-width:100%;min-height:100%;object-fit:cover;filter:none;transform:none}
 #app{position:relative;z-index:1}
 .hidden{display:none}

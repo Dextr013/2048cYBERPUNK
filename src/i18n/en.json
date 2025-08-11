@@ -1,5 +1,5 @@
 {
-  "title": "Киберпанк 2048",
+  "title": "Cyberpunk 2048",
   "newGame": "New Game",
   "score": "Score",
   "best": "Best",
@@ -23,6 +23,10 @@
   "nextTrack": "Next",
   "prevTrack": "Prev",
   "achievements": "Achievements",
+  "size": "Size",
+  "undo": "Undo",
+  "redo": "Redo",
+  "hint": "Hint"
   "achievementUnlocked": "Achievement unlocked: {name}",
   "ach_128": "Reach tile 128",
   "ach_256": "Reach tile 256",

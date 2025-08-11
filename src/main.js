@@ -355,6 +355,8 @@ async function boot() {
   document.getElementById('preloader')?.classList.add('hidden')
   document.getElementById('app')?.classList.remove('hidden')
   if (window.__boot_timeout) { clearTimeout(window.__boot_timeout); window.__boot_timeout = null }
+  // Refresh i18n on initial render to translate new UI elements
+  setUiTexts()
 
   // Set background on separate layer (#bg-layer) - supports ?bg=URL
   try {
@@ -416,7 +418,6 @@ async function boot() {
       showToast(t('endurance5'))
     }
 
-    renderer.update(dt)
     renderer.update(dt)
     renderer.render(game)
     requestAnimationFrame(tick)
