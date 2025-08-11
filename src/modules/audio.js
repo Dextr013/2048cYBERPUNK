@@ -5,6 +5,7 @@ export class AudioManager {
     this.current = null
     this.currentId = null
     this.volume = 0.6
+    this._actx = null
   }
 
   setEnabled(on) {
@@ -95,5 +96,28 @@ export class AudioManager {
       this.current.currentTime = 0
       this.current = null
     }
+  }
+
+  playSfx(type) {
+    try {
+      if (!this._actx) this._actx = new (window.AudioContext || window.webkitAudioContext)()
+      const ctx = this._actx
+      const o = ctx.createOscillator()
+      const g = ctx.createGain()
+      const now = ctx.currentTime
+      const vol = Math.min(0.2, this.volume)
+      let freq = 220
+      if (type === 'merge') freq = 660
+      else if (type === 'spawn') freq = 440
+      else if (type === 'move') freq = 300
+      o.type = 'sine'
+      o.frequency.setValueAtTime(freq, now)
+      g.gain.setValueAtTime(0.0001, now)
+      g.gain.exponentialRampToValueAtTime(vol, now + 0.01)
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12)
+      o.connect(g).connect(ctx.destination)
+      o.start(now)
+      o.stop(now + 0.13)
+    } catch {}
   }
 }

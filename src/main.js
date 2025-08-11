@@ -15,6 +15,7 @@ try {
 
 const canvas = document.getElementById('game-canvas')
 const ctx = canvas.getContext('2d', { alpha: true })
+const container = document.querySelector('.game-container')
 
 const state = {
   started: false,
@@ -87,7 +88,7 @@ async function boot() {
     }
   } catch {}
 
-  const audio = new AudioManager([
+    const audio = new AudioManager([
     { id: 'bgm1', src: 'Nightwalk.ogg', type: 'music' },
     { id: 'bgm2', src: 'minimum.ogg', type: 'music' },
     { id: 'bgm3', src: 'malfunction.ogg', type: 'music' },
@@ -110,6 +111,9 @@ async function boot() {
   const game = new Game()
   const renderer = new Renderer(canvas)
   const input = new Input(canvas)
+  input.onUndo = () => doUndo()
+  input.onRedo = () => doRedo()
+  input.onHint = () => doHint()
   const achievements = new Achievements()
   state.achievements = achievements
 
@@ -123,6 +127,14 @@ async function boot() {
     saveState(game)
     tick(performance.now())
   })
+
+  // Undo/Redo/Hint buttons
+  const btnUndo = document.getElementById('btn-undo')
+  const btnRedo = document.getElementById('btn-redo')
+  const btnHint = document.getElementById('btn-hint')
+  if (btnUndo) btnUndo.addEventListener('click', () => doUndo())
+  if (btnRedo) btnRedo.addEventListener('click', () => doRedo())
+  if (btnHint) btnHint.addEventListener('click', () => doHint())
   const btnRestart = document.getElementById('btn-restart')
   if (btnRestart) btnRestart.addEventListener('click', async () => {
     if (AdConfig.interstitialOnRestart) tryShowInterstitial()
@@ -161,13 +173,25 @@ async function boot() {
 
   const modeSel = document.getElementById('mode-select')
   if (modeSel) {
+    if (state.mode === 'hard') state.mode = 'classic'
     modeSel.value = state.mode
     modeSel.addEventListener('change', (e) => {
       state.mode = e.target.value
       try { localStorage.setItem('mode', state.mode) } catch {}
       applyModeUi()
-      // restart run to apply rules cleanly
       startNewRun(game, renderer)
+    })
+  }
+
+  const sizeSel = document.getElementById('size-select')
+  if (sizeSel) {
+    sizeSel.value = String(game.size)
+    sizeSel.addEventListener('change', (e) => {
+      const ns = Number(e.target.value)
+      if (game.resize(ns)) {
+        startNewRun(game, renderer)
+        updateHud(game)
+      }
     })
   }
 
@@ -208,6 +232,7 @@ async function boot() {
     volumeRange.addEventListener('input', (e) => {
       const v = Number(e.target.value)
       audio.setVolume(v / 100)
+      try { localStorage.setItem('volume', String(v)) } catch {}
     })
   }
   if (trackSelect) {
@@ -232,20 +257,38 @@ async function boot() {
   }
 
   // Input -> Game actions
-  input.onMove = (dir) => {
+  let inputLocked = false
+  const undoStack = []
+  const redoStack = []
+
+  input.onMove = async (dir) => {
+    if (inputLocked) return
     if (state.mode === 'timed' && state.timerMs <= 0) return
+    const prev = game.getState()
     const result = game.move(dir)
     if (result.moved) {
-      if (result.moves?.length) renderer.animateSlides(result.moves)
-      // Visuals: bounce merged, pulse spawn
-      if (result.mergesPositions?.length) renderer.bumpTiles(result.mergesPositions)
-      if (result.spawnedAt) renderer.pulseSpawn(result.spawnedAt[0], result.spawnedAt[1])
+      // stacks
+      undoStack.push(prev)
+      redoStack.length = 0
+      state.audio?.playSfx('move')
 
-      // Combo toast
+      inputLocked = true
+      if (result.moves?.length) await renderer.animateSlides(result.moves)
+      // Visuals
+      if (result.mergesPositions?.length) {
+        renderer.bumpTiles(result.mergesPositions)
+        renderer.queueMergeEffect(result.mergesPositions)
+        state.audio?.playSfx('merge')
+      }
+      if (result.spawnedAt) {
+        renderer.pulseSpawn(result.spawnedAt[0], result.spawnedAt[1])
+        renderer.queueSpawnEffect(result.spawnedAt[0], result.spawnedAt[1])
+        state.audio?.playSfx('spawn')
+      }
+
       if (result.mergesCount >= 2) {
         showToast(`${t('combo')} ${result.mergesCount}!`)
       }
-      // 512 under 30 sec challenge toast
       if (!state.reached512At && getMaxTile(game) >= 512) {
         const elapsed = Date.now() - state.startedAt
         state.reached512At = Date.now()
@@ -257,17 +300,52 @@ async function boot() {
       achievements.check(game)
       if (result.won) { showOverlay(t('youWin'), t('mergeTo', { value: 2048 })); Platform.submitScore(game.score) }
       else if (game.isGameOver()) { showOverlay(t('gameOver'), t('noMoves')); Platform.submitScore(game.score); if (AdConfig.interstitialOnGameOver) tryShowInterstitial() }
+      inputLocked = false
     }
+  }
+
+  function doUndo() {
+    if (!undoStack.length) return
+    const cur = game.getState()
+    const prev = undoStack.pop()
+    redoStack.push(cur)
+    game.setState(prev)
+    updateHud(game)
+  }
+  function doRedo() {
+    if (!redoStack.length) return
+    const cur = game.getState()
+    const next = redoStack.pop()
+    undoStack.push(cur)
+    game.setState(next)
+    updateHud(game)
+  }
+  function doHint() {
+    const hint = suggestMove(game)
+    if (hint) showToast(`Hint: ${hint}`)
   }
 
   input.onRestart = () => document.getElementById('btn-restart')?.click()
 
   // Resize
   function resize() {
-    const bounds = canvas.getBoundingClientRect()
     const dpr = Math.min(2, window.devicePixelRatio || 1)
-    canvas.width = Math.floor(bounds.width * dpr)
-    canvas.height = Math.floor(bounds.height * dpr)
+    const vw = Math.max(320, Math.min(window.innerWidth, 1920))
+    const vh = Math.max(320, Math.min(window.innerHeight, 1920))
+
+    // Prefer container bounds; container keeps square via CSS aspect-ratio
+    let cw = vw, ch = vh
+    if (container) {
+      const cb = container.getBoundingClientRect()
+      if (cb.height > 0) { cw = cb.width; ch = cb.height }
+    }
+
+    const side = Math.floor(Math.min(cw, ch))
+
+    canvas.style.width = `${side}px`
+    canvas.style.height = `${side}px`
+    canvas.width = Math.floor(side * dpr)
+    canvas.height = Math.floor(side * dpr)
     renderer.setDpr(dpr)
   }
   window.addEventListener('resize', resize)
@@ -277,18 +355,24 @@ async function boot() {
   document.getElementById('preloader')?.classList.add('hidden')
   document.getElementById('app')?.classList.remove('hidden')
   if (window.__boot_timeout) { clearTimeout(window.__boot_timeout); window.__boot_timeout = null }
+  // Refresh i18n on initial render to translate new UI elements
+  setUiTexts()
 
-  // Set random cyber background reliably on all devices
+  // Set background on separate layer (#bg-layer) - supports ?bg=URL
   try {
-    const bgs = ['bg6.png','background17.png','background18.png','background19.png']
-    const pick = bgs[Math.floor(Math.random() * bgs.length)]
-    const isCoarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches
-    document.body.style.backgroundColor = '#000'
-    document.body.style.backgroundImage = `url("${pick}")`
-    document.body.style.backgroundRepeat = 'no-repeat'
-    document.body.style.backgroundPosition = 'center'
-    document.body.style.backgroundSize = 'cover'
-    document.body.style.backgroundAttachment = (isCoarse || window.innerWidth <= 800) ? 'scroll' : 'fixed'
+    const bgLayer = document.getElementById('bg-layer')
+    if (bgLayer) {
+      const q = new URLSearchParams(location.search)
+      const customBg = q.get('bg')
+      const defaultBg = 'https://avatars.mds.yandex.net/get-games/1892995/2a00000198578acfc08bd4a514259834ed86//orig'
+      const fallbackList = ['background17.webp','background18.webp','background19.webp','bg6.png']
+      const chosen = customBg ? decodeURIComponent(customBg) : defaultBg
+      const img = document.getElementById('bg-img')
+      if (img) {
+        img.src = chosen
+        img.onerror = () => { img.src = fallbackList[Math.floor(Math.random()*fallbackList.length)] }
+      }
+    }
   } catch {}
 
   // Defer platform init after first paint
@@ -334,6 +418,7 @@ async function boot() {
       showToast(t('endurance5'))
     }
 
+    renderer.update(dt)
     renderer.render(game)
     requestAnimationFrame(tick)
   }
@@ -359,16 +444,7 @@ function startNewRun(game, renderer) {
   } else {
     state.timerMs = 0
   }
-  if (state.mode === 'hard') {
-    state.hardInterval = setInterval(() => {
-      const added = game.addRandomBlocker()
-      if (added) {
-        // small visual cue
-        renderer.bumpTiles([added])
-        showToast(t('blockerSpawned'))
-      }
-    }, 30000)
-  }
+
   // pulse last spawned tile from reset
   if (lastSpawn) renderer.pulseSpawn(lastSpawn[0], lastSpawn[1])
 }
@@ -495,6 +571,22 @@ function showToast(message) {
     el.classList.remove('show')
     setTimeout(() => el.classList.add('hidden'), 400)
   }, 3000)
+}
+
+function suggestMove(g) {
+  const dirs = ['up','down','left','right']
+  let best = null
+  let bestScore = -Infinity
+  for (const d of dirs) {
+    const sim = new Game(g.size, 123)
+    sim.setState(g.getState())
+    const res = sim.move(d)
+    if (!res.moved) continue
+    const empties = sim.getEmptyCells().length
+    const evalScore = empties * 10 + res.mergesCount * 100 + (sim.score - g.score)
+    if (evalScore > bestScore) { bestScore = evalScore; best = d }
+  }
+  return best
 }
 
 boot().catch((err) => {
